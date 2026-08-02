@@ -1,0 +1,181 @@
+---
+title: 天空和大气的渲染 天空视线 LUT
+description: 参考 2020 年 Hillaire 工作的大气透射率预计算实现
+---
+
+<Card
+  title="完整实现代码"
+  href="https://github.com/j1n9h3/Alpha3D/blob/v0.1.9/shaders/sky_atmosphere/sky_atmosphere.frag"
+>
+Alpha3D v0.1.9
+</Card>
+
+参照论文 [*Hillaire 2020 - A Scalable and Production Ready Sky and Atmosphere Rendering Technique*](https://sebh.github.io/publications/egsr2020.pdf) 中的实时大气渲染方案实现。
+
+
+由于大气散射是低频、平滑的信号，可以先用较低分辨率生成 Sky-View LUT，再将它上采样到屏幕分辨率，这样可以不用对每个 4K 或 8K 像素都独立执行积分，大大减少计算量。
+
+这张 LUT 中，纹理上半部分表示天空，下半部分表示虚拟的行星地面，地平线位于中间附近，由于大气的对称性，太阳位于最左侧，太阳对面位于最右侧。
+
+<OssImage
+  src="sky_atmosphere/sky_atmosphere_sky_view_lut_2.png"
+  alt="sky_atmosphere_sky_view_lut"
+  width={1920}
+  height={1080}
+/>
+
+
+与 Transmittance LUT 记录光线衰减不同，Sky-View LUT 记录的是沿一条视线累积得到的天空散射辐射。这里的光学深度、Beer–Lambert 透射率、Rayleigh/Mie 密度和相位函数都沿用 [01 单散射实现](./sky_atmosphere_1993) 中的路径积分，本节只介绍如何把积分结果组织成一张可查询的天空表。
+
+Sky-View LUT 只缓存当前观察高度对应的结果。相机高度或太阳方向发生明显变化时，需要重新生成这张表；场景渲染阶段则可以反复采样它。
+
+光照方向和 viewHeight 改变时，需要对应地重新渲染 Sky-View LUT。
+
+## 构造 Sky-View LUT 输入输出
+
+生成一张 Sky-View LUT 时，观察点、太阳方向和大气参数都固定不变。此时真正会变化的只有视线方向，所以可以用一个二维坐标 $(u,v)$ 表示所有可能的视线方向。
+
+<OssImage
+  src="sky_atmosphere/sky_atmosphere_2020_14.svg"
+  alt="sky_atmosphere_sky_view_lut"
+  width={320}
+  height={320}
+/>
+
+实现使用 $192\times108$ 的二维纹理，$u$ 表示视线在 $x$-$z$ 水平面上相对于太阳方向的夹角余弦，$v$ 表示视线天顶方向的夹角 $\beta$ 余弦。
+
+天空并不是所有区域都同样平滑。天顶附近的颜色变化较慢，而地平线附近的亮度和颜色变化更快，因此需要更丰富的查找表内容，不能和天顶区域平均分配同样数量的纹素。实现中会把更多纹素集中到地平线附近，远离地平线后再逐渐减少纹素分配。
+
+## 写入 Sky-View LUT
+
+从观察点发出若干条射线，计算 LUT 中不同的 $v$ 对应的射线方向。
+
+
+<OssImage
+  src="sky_atmosphere/sky_atmosphere_2020_15.svg"
+  alt="sky_atmosphere_sky_view_lut"
+  width={320}
+  height={320}
+/>
+
+设观察点到行星中心的距离为 $r$，行星半径为 $R_p$，观察点到地平线切点的距离为 $d$。
+
+
+
+由直角三角形的几何关系：
+
+$$
+r^2=R_p^2+d^2
+$$
+
+因此：
+
+$$
+d=\sqrt{r^2-R_p^2}
+$$
+
+并且：
+
+$$
+\cos\beta=\frac{d}{r}
+$$
+
+设：
+
+$$
+\theta=\pi-\beta
+$$
+
+当地平线以上 $v<0.5$：
+
+$$
+\mu_v=
+\cos\left[
+\theta\left(1-(1-2v)^2\right)
+\right]
+$$
+
+当地平线以下 $v\ge0.5$：
+
+$$
+\mu_v=
+\cos\left[
+\theta+\beta(2v-1)^2
+\right]
+$$
+
+平方项用于让地平线附近的采样更密集。
+
+对于水平方向，纹理坐标 $u$ 用于表示视线方向与太阳方向在水平面上的夹角。经过同样的平方映射后，可以得到：
+
+$$
+\mu_l=\cos\phi=1-2u^2
+$$
+
+其中，$φ$ 是视线方向与太阳方向在水平面上的夹角。
+
+<OssImage
+  src="sky_atmosphere/sky_atmosphere_2020_16.svg"
+  alt="sky_atmosphere_sky_view_lut"
+  width={320}
+  height={320}
+/>
+
+之后根据视线的天顶角和相对于太阳的水平夹角，构造出完整的三维视线方向。
+
+$$
+\omega_v=
+\left(
+\sqrt{1-\mu_v^2}\,\mu_l,
+\mu_v,
+\sqrt{1-\mu_v^2}\sqrt{1-\mu_l^2}
+\right)
+$$
+
+其中，$x$-$z$ 平面为局部水平面。
+
+
+在同一局部坐标系中，记太阳天顶角余弦为 $\mu_s=\cos\theta_s$。由于 $y$ 轴表示天顶方向，并将太阳的水平投影对齐到 $x$ 轴，因此太阳方向为：
+
+$$
+\omega_s=
+\left(
+\sqrt{1-\mu_s^2},\,
+\mu_s,\,
+0
+\right)
+$$
+
+这里是在把太阳旋转到 $x$-$y$ 竖直平面。太阳真实的水平方位会通过 $\mu_l$ 在 LUT 采样时编码进去，因此不会丢失光照相对方位，可以理解成光照方向是固定的，视线方向遍历 [-$\pi$, $\pi$]。
+
+
+最终沿 $\omega_v$ 方向做大气散射积分：
+
+$$
+L_{\mathrm{sky}}
+=
+\operatorname{integrateAtmosphereScattering}
+\left(
+\mathbf p,\,
+\omega_v,\,
+s_{\max},\,
+\mathbf 0,\,
+\omega_s
+\right)
+$$
+
+计算得到的 $L_{\mathrm{sky}}$ 就是当前 texel 对应的天空辐射，并写入 Sky-View LUT。
+
+
+### 注意：纹素坐标转换输入参数
+
+一个 texel 内部的颜色是一样的，texel 中心对应一个具体的 LUT 参数，相邻 texel 之间的颜色不同，线性插值会根据它们中心的位置进行混合，第一个 texel 代表的是 $u=\frac{1}{2W}$，而不是逻辑边界 $u=0$，我们希望查找表能计算到边界 $u=0$ 的地方，因此做相应的偏移计算。
+
+<Card
+  title="纹素坐标转换输入参数"
+  href="https://github.com/j1n9h3/Alpha3D/blob/v0.1.9/shaders/sky_atmosphere/sky_atmosphere.frag#L95-L97"
+>
+Alpha3D v0.1.9
+</Card>
+
+这样当 $u=0$ 的时候，可以取到极限角度，而非近似角度。

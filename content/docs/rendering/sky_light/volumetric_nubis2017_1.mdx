@@ -1,0 +1,76 @@
+---
+title: 附：体积云的渲染 BugFix
+description: 实现基本的 Cube 的光线步进
+---
+
+### BugFix01: 保留透视投影中被 Near 和 Far 剔除的内容
+
+相机逐渐靠近 Cube 时，云体上出现平整的切面，相机完全进入 Cube 后，画面反而恢复正常。
+
+启用 `GL_DEPTH_CLAMP` 后，问题得以解决。
+
+<ImageComparison
+  before="/volumetric_cloud/bugfix01-1.png"
+  after="/volumetric_cloud/bugfix01-2.png"
+  beforeAlt="glDisable(GL_DEPTH_CLAMP)"
+  afterAlt="glEnable(GL_DEPTH_CLAMP)"
+  beforeLabel="glDisable(GL_DEPTH_CLAMP)"
+  afterLabel="glEnable(GL_DEPTH_CLAMP)"
+/>
+
+透视投影中位于 near plane 前面的物体面会被裁剪，不产生 fragment。
+
+`GL_DEPTH_CLAMP` 用来阻止几何体被 near plane 和 far plane直接裁掉，把超出范围的深度压回有效范围，比如超过 near plane 的深度会被限制到最近深度，超过 far plane 的深度会限制到最远深度。
+
+
+
+
+### BugFix02: 解决进入 Cube 后亮度突变的问题
+
+<OssImage
+  src="/volumetric_cloud/bugfix02-1.gif"
+  alt="sky_atmosphere_sky_view_lut"
+  width={1920}
+  height={1080}
+/>
+
+根本原因是在关闭表面剔除的情况下，相机在 Cube 外执行了两遍 ray marching（Front Face 执行一次，Back Face 执行一次），进入 Cube 后只执行一遍 ray marching0（只执行 Back Face 的 ray marching），因此颜色发生突变。
+
+解决方法是判断相机当前是否在 cube 内，如果在的话就剔除正面渲染，如果在 cube 外面的话就剔除背面渲染，保证只渲染一次。
+
+```c++
+glm::mat4 inverseModel = glm::inverse(test_object->GetTransform().GetModelMatrix());
+
+glm::vec3 localCameraPos = glm::vec3(
+    inverseModel * glm::vec4(camera.GetPosition(), 1.0f)
+);
+
+constexpr float epsilon = 0.0001f;
+
+bool cameraInsideVolume =
+    localCameraPos.x >= -0.5f - epsilon &&
+    localCameraPos.x <= 0.5f + epsilon &&
+    localCameraPos.y >= -0.5f - epsilon &&
+    localCameraPos.y <= 0.5f + epsilon &&
+    localCameraPos.z >= -0.5f - epsilon &&
+    localCameraPos.z <= 0.5f + epsilon;
+
+glEnable(GL_DEPTH_CLAMP);
+glEnable(GL_CULL_FACE);
+glCullFace(cameraInsideVolume ? GL_FRONT : GL_BACK);
+glDepthMask(GL_FALSE);
+
+test_object->Draw();
+```
+
+判断时要把相机转换到物体的局部坐标系中，之后判断和 bouding box 的位置情况，根据位置情况启用不同的面剔除。
+
+最终结果如下：
+
+<OssImage
+  src="/volumetric_cloud/bugfix02-2.gif"
+  alt="sky_atmosphere_sky_view_lut"
+  width={1920}
+  height={1080}
+/>
+

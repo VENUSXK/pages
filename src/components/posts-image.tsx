@@ -44,14 +44,17 @@ interface OssImageProps {
 	const isSvg = (path: string) => {
 		return path.toLowerCase().endsWith('.svg');
 	};
+	const isGif = (path: string) => {
+		return path.toLowerCase().split(/[?#]/, 1)[0].endsWith('.gif');
+	};
 
 	const buildOssUrl = (path: string) => {
 		const baseUrl = "https://j1n9h3.oss-cn-hangzhou.aliyuncs.com";
 		const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 		const fullUrl = `${baseUrl}/${cleanPath}`;
 
-		if (isSvg(path) || processing === "none") {
-		return fullUrl;
+		if (isSvg(path) || isGif(path) || processing === "none") {
+			return fullUrl;
 		}
 
 		if (processing === "2webp") {
@@ -61,22 +64,50 @@ interface OssImageProps {
 		return fullUrl;
 	};
 
+	const gif = isGif(src);
 	const imageUrl = buildOssUrl(src);
 	const imageClassName = className ?? (fill
 		? "object-cover rounded-lg"
 		: "m-auto h-auto object-cover rounded-lg");
-	const imageContainerClassName = `${fill ? "relative " : ""}${containerClassName}`;
+	const imageContainerClassName = `${fill || gif ? "relative " : ""}${containerClassName}`;
 
 	if (error) {
 		return (
-		<div className={imageContainerClassName}>
+			<div className={imageContainerClassName}>
 			<div
-				className={`flex items-center justify-center bg-stone-900 my-2 text-stone-500 w-full h-64 ${imageClassName}`}
+				className={`flex items-center justify-center bg-stone-900 my-2 text-stone-500 w-full h-64 ${imageClassName ?? ""}`}
 			
 			>
 			<span className="text-lg font-light ">图片加载失败</span>
 			</div>
 		</div>
+		);
+	}
+
+	if (gif) {
+		return (
+			<div className={imageContainerClassName}>
+				<div className={fill ? "absolute inset-0 scale-90" : "relative mx-auto w-fit max-w-full"}>
+					<Image
+						src={imageUrl}
+						alt={alt}
+						width={fill ? undefined : (width ?? 640)}
+						height={fill ? undefined : (height ?? 480)}
+						fill={fill}
+						className={`rounded-lg object-contain ${fill ? "" : "h-auto w-[320px] max-w-full"} ${className ?? ""}`}
+						sizes={fill ? (sizes ?? "90vw") : sizes}
+						priority={priority}
+						unoptimized
+						onError={() => {
+							setError(true);
+							onError?.();
+						}}
+					/>
+					<span className="absolute right-2 top-2 rounded-md bg-black px-2 py-1 text-xs font-medium text-white shadow-md">
+						GIF
+					</span>
+				</div>
+			</div>
 		);
 	}
 
