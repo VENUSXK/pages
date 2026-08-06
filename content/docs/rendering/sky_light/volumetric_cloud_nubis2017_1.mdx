@@ -1,0 +1,162 @@
+---
+title: 体积云渲染 光线步进 立方体求交
+description: 用低频和高频噪声实现体积云建模
+---
+
+
+### 世界空间转局部空间
+
+先想一个问题：体积云覆盖的范围大约是 $100 \times 100 \times 100$ 公里。如果直接在这么大的尺度上做光线求交，坐标动不动就是 $10^5$ 这种量级——浮点数的精度是有限的，数值越大，小数部分的精度越差，累积误差会让后续的采样位置漂得不成样子。
+
+那怎么办？一个很自然的想法是：**把问题缩小到一个好处理的尺度上**。我们把云盒的 model 矩阵记作 $M$，它把一个小立方体缩放、旋转、平移到世界空间中去。反过来，用它的逆矩阵 $M^{-1}$，就能把世界空间中的射线"拽"回局部空间，让云盒变成一个标准的 $[-0.5, 0.5]^3$ 立方体。在这个 $1 \times 1 \times 1$ 的小盒子里做计算，数值干净，误差可控。
+
+GLSL 里就这么两行：
+
+```glsl
+vec3 rayOrigin = (inverseModel * vec4(cameraPos, 1.0)).xyz;
+vec3 worldRayDirection = GetViewDir();
+vec3 rayDirection = (inverseModel * vec4(worldRayDirection, 0.0)).xyz;
+```
+
+注意一个细节：相机位置用 `w=1.0`（它是一个点，受平移影响），视线方向用 `w=0.0`（它是一个向量，只受旋转和缩放影响，平移对它没意义）。这是图形学里点和向量的基本区分。
+
+写成数学形式，设相机世界坐标为 $c$，视线方向为 $\omega$：
+
+$$
+p_0 = M^{-1} \cdot c,\qquad
+d = M^{-1} \cdot \omega.
+$$
+
+局部空间中的光线就是 $p_0 + t \cdot d$。把它代回世界空间验证一下：
+
+$$
+M \cdot (p_0 + t \cdot d)
+= M M^{-1} c + t \cdot M M^{-1} \omega
+= c + t \cdot \omega.
+$$
+
+矩阵互逆消去，$t$ 纹丝不动。这说明什么？**$t$ 在两个空间中是同一个量**——它既代表世界空间里沿 $\omega$ 走了多少米，也代表局部空间里沿 $d$ 走了多少个"局部单位"。前提只有一个：$d$ 直接取 $M^{-1} \cdot \omega$，**不要对 $d$ 做任何额外的缩放**。
+
+这个前提非常关键，值得多花一点篇幅讲清楚。
+
+---
+
+#### 一个极易踩的坑：不要归一化方向
+
+写过图形学的人都有肌肉记忆——方向向量拿来先 normalize 一下，保证它是单位长度。但在体积云这个场景里，**这个习惯反而会引入一个隐蔽的 bug**。
+
+为什么？我们推一下。
+
+假设你对 $d$ 做了归一化，令 $d_{norm} = d \,/\, \|d\|$。归一化之后，原来用 $t$ 就能到达的局部位置，现在需要一个新的参数 $t'$：
+
+$$
+t \cdot d = t' \cdot d_{norm}
+\quad\Rightarrow\quad
+t' = t \cdot \|d\|.
+$$
+
+$t'$ 和 $t$ 差了 $\|d\|$ 倍，它们不再相等了。
+
+**算位置的时候**，两个公式给出的局部坐标是一样的——$p_0 + t \cdot d = p_0 + t' \cdot d_{norm}$，位置没错。
+
+**但算步长的时候**，问题就来了。光线步进需要把 $t_{near}$ 到 $t_{far}$ 这段区间等分成 $N$ 步，每步的步长是 $(t_{far} - t_{near}) / N$。这个步长随后会进入消光积分：
+
+```glsl
+transmittance *= exp(-extinction * density * stepSize);
+```
+
+这里 $\exp(-\sigma \cdot \rho \cdot \Delta s)$ 是 Beer-Lambert 定律的离散形式，$\Delta s$ 必须是**世界空间的物理距离（米）**，否则消光量就错了。
+
+如果你没有归一化 $d$，那么 $t_{near}$ 和 $t_{far}$ 天然就是世界空间的物理距离，步长也是——直接拿来用，分毫不差。这正是上一节推导的核心结论：$t$ 等于世界空间沿 $\omega$ 走的距离。
+
+**但如果你归一化了 $d$**，情况就变了。来看 $\|d\|$ 到底是多少。云盒在局部空间是 $[-0.5, 0.5]^3$，边长 1；在世界空间被 $M$ 放大到 100 km。$d = M^{-1} \cdot \omega$，其中 $\omega$ 是单位向量（长度 1），而逆矩阵 $M^{-1}$ 包含了缩放因子的倒数——约 $1 / 100000$。所以 $\|d\| \approx 0.00001$，远小于 1。
+
+归一化后 $d_{norm}$ 变回单位长度，$t' = t \cdot \|d\|$ 也跟着缩小了十万倍。步长也跟着缩小：
+
+```glsl
+stepSize' = stepSize * ‖d‖;  // 比真实物理步长小了十万倍！
+```
+
+把这个缩小后的步长代入消光积分：
+
+```glsl
+transmittance *= exp(-extinction * density * (stepSize * ‖d‖));
+```
+
+每步的消光量被压缩了 $\|d\|$ 倍——本该被云挡住的光，现在穿透了。透射率累积偏高，云看起来稀疏透明。**局部坐标全对，画面全错。**
+
+---
+
+#### 回到正轨
+
+所以正确的做法是：**保留 $d = M^{-1} \cdot \omega$，不做 normalize**。这样带来的好处是系统性的：
+
+- $t$ 直接就是世界空间的物理距离（米），不需要任何换算。
+- $t_{near}$、$t_{far}$ 直接就是光线进入和离开云层的世界空间距离。
+- 步长 $(t_{far} - t_{near}) / N$ 直接就是世界空间的物理步长，塞进消光积分公式里量纲完全正确。
+- 省去一次 normalize 计算，虽然这点性能微不足道，但**物理意义的清晰比性能更重要**。
+
+**一句话总结**：在局部空间做计算是为了数值稳定性，但物理量（消光、步长）必须用世界空间的真实尺度。不归一化 $d$，$t$ 就天然承担了这个"物理距离"的角色——这是整个方案最巧妙的地方。
+
+### 立方体求交（Slab 方法）
+
+立方体 $[-0.5, 0.5]^3$ 可看作三组平行平面（slab）的交集：
+
+$$
+x \in [-0.5, 0.5],\quad y \in [-0.5, 0.5],\quad z \in [-0.5, 0.5].
+$$
+
+设光线参数方程为 $p(t) = p_0 + t \cdot d$，记 $p_0 = (x_0, y_0, z_0)$，$d = (d_x, d_y, d_z)$。以 x 轴为例，光线与负半平面和正半平面的交点分别为：
+
+$$
+x_0 + t_x^- \cdot d_x = -0.5
+\quad\Rightarrow\quad
+t_x^- = \frac{-0.5 - x_0}{d_x},
+\qquad
+t_x^+ = \frac{0.5 - x_0}{d_x}. \tag{1}
+$$
+
+y、z 轴同理共得六个 t 值。GLSL 中逐分量计算：
+
+```glsl
+vec3 t0 = (-0.5 - rayOrigin) / rayDirection;  // t_x^-, t_y^-, t_z^-
+vec3 t1 = ( 0.5 - rayOrigin) / rayDirection;  // t_x^+, t_y^+, t_z^+
+```
+
+每个轴的进入和离开 t 由 min / max 确定：
+
+```glsl
+vec3 nearValues = min(t0, t1);  // t_k^- 与 t_k^+ 中的较小者
+vec3 farValues  = max(t0, t1);  // t_k^- 与 t_k^+ 中的较大者
+```
+
+立方体是三组 slab 的**交集**——光线必须同时处于三个 slab 内才算进入立方体。因此 $t_{near}$ 取 `nearValues` 三个分量的最大值（最后进入的轴），$t_{far}$ 取 `farValues` 三个分量的最小值（最先离开的轴）。
+
+```glsl
+vec2 calculateVolumeIntersection(vec3 rayOrigin, vec3 rayDirection)
+{
+    vec3 t0 = (-0.5 - rayOrigin) / rayDirection;
+    vec3 t1 = ( 0.5 - rayOrigin) / rayDirection;
+    vec3 nearValues = min(t0, t1);
+    vec3 farValues = max(t0, t1);
+    return vec2(max(max(nearValues.x, nearValues.y), nearValues.z),
+                min(min(farValues.x, farValues.y), farValues.z));
+}
+```
+
+若 $t_{near} > t_{far}$，光线与立方体不相交。
+
+### 光线步进
+
+拿到交点区间 `hit = (t_near, t_far)` 后，在立方体内沿光线方向逐步采样：
+
+```glsl
+float t0 = max(hit.x, 0.0);   // 进入 t，若相机在立方体内则为 0
+float t1 = hit.y;              // 离开 t
+if (t1 <= t0) discard;         // 无有效区间，丢弃片段
+
+float stepSize = (t1 - t0) / float(max(maxSteps, 1));
+```
+
+- `t0` 取 `max(hit.x, 0.0)`：当相机在立方体内部时，`t_near` 为负，实际步进应从相机位置（t=0）开始。
+- `t1 - t0` 即光线穿过立方体的总长度，除以 `maxSteps` 得到每步的步长。

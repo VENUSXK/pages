@@ -1,9 +1,16 @@
 "use client";
 
-import {
-  ReactCompareSlider,
-  ReactCompareSliderImage,
-} from "react-compare-slider";
+import dynamic from "next/dynamic";
+
+const ReactCompareSlider = dynamic(
+  () => import("react-compare-slider").then((mod) => mod.ReactCompareSlider),
+  { ssr: false }
+);
+
+const ReactCompareSliderImage = dynamic(
+  () => import("react-compare-slider").then((mod) => mod.ReactCompareSliderImage),
+  { ssr: false }
+);
 
 interface ImageComparisonProps {
   before: string;
@@ -14,7 +21,7 @@ interface ImageComparisonProps {
   afterLabel?: string;
 }
 
-export function ImageComparison({
+function ImageComparisonInner({
   before,
   after,
   beforeAlt = "对比图一",
@@ -23,9 +30,8 @@ export function ImageComparison({
   afterLabel = "处理后",
 }: ImageComparisonProps) {
   return (
-    <div className="my-8">
+    <div className="not-prose my-0 block aspect-video w-full overflow-hidden rounded-lg">
         <ReactCompareSlider
-        className="not-prose my-0 block aspect-video w-full overflow-hidden rounded-lg"
         itemOne={
             <div className="relative h-full w-full">
             <ReactCompareSliderImage
@@ -55,4 +61,8 @@ export function ImageComparison({
         />
     </div>
   );
+}
+
+export function ImageComparison(props: ImageComparisonProps) {
+  return <ImageComparisonInner {...props} />;
 }

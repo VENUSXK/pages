@@ -292,16 +292,4 @@ v0.1.9
 
 相比不用 LUT，使用 LUT 分别比 64、32 和 16 个 Light Steps 快约 28.4 倍、14.9 倍和 8.2 倍。
 
-<ChartBarComparison
-  title="GPU 时间对比"
-  data={[
-    { label: "With LUT, 64 Light Steps", value: 0.231 },
-    { label: "Without LUT, 64 Light Steps", value: 6.565 },
-    { label: "Without LUT, 32 Light Steps", value: 3.45 },
-    { label: "Without LUT, 16 Light Steps", value: 1.9 },
-  ]}
-  unit="ms"
-  accent="With LUT, 64 Light Steps"
-/>
-
 下一步可以继续阅读 [03 Sky-View LUT 实现](./sky_atmosphere_2020_2)，了解如何在视线积分中复用这张透射率表，并缓存天空散射结果。

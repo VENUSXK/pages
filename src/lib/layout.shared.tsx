@@ -15,23 +15,12 @@ export function baseOptions(): BaseLayoutProps {
       // JSX supported
       title: 'J1N9H3',
     },
-    links: [
-        {
-          // icon: <BookIcon />,
-          text: 'ABOUT ME',
-          url: '/about-me',
-          on: 'nav',
-          // secondary items will be displayed differently on navbar
-          secondary: true,
-        },
-        // other items
-    ],
     searchToggle: {
       enabled: false
     },
     themeSwitch: {
-      enabled: false
+      enabled: true
     },
-    // githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
+    githubUrl: `https://github.com/j1n9h3`,
   };
 }

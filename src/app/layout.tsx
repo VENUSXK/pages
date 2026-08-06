@@ -10,12 +10,11 @@ const inter = Inter({
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${inter.className} dark`} style={{ colorScheme: 'dark' }} suppressHydrationWarning>
+    <html lang="en" className={inter.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen overflow-y-scroll">
         {/* <Banner id='1' changeLayout={false}></Banner> */}
         <RootProvider
           search={{ enabled: false }}
-          theme={{ enabled: false }}
         >
           {children}
         </RootProvider>
