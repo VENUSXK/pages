@@ -5,11 +5,11 @@ summary: 'Discover why Vim, with its steep learning curve, remains a beloved too
 ---
 
 
-## 单次散射积分实现
+## 基础大气散射渲染方法
 
 <Cards>
   <Card icon={<SiGithub />} href="https://github.com/j1n9h3/Alpha3D/blob/v0.1.6/shaders/sky_atmosphere_1993.frag" title="实现代码 Alpha3D v0.1.6">
-    实时大气单次散射 ray-marching 实现，包含 rayleigh 散射、mie 散射与臭氧吸收
+    实时大气单次散射 ray-marching 实现，包含 Rayleigh 散射、Mie 散射与臭氧吸收
   </Card>
   <Card icon={<SiAcm />} href="https://dl.acm.org/doi/abs/10.1145/166117.166140" title="参考论文 Nishita 1993">
 Nishita et al. Display of the Earth Taking into Account Atmospheric Scattering. SIGGRAPH, 1993
@@ -17,11 +17,6 @@ Nishita et al. Display of the Earth Taking into Account Atmospheric Scattering. 
 </Cards>
 
 ```glsl title="shaders/sky_atmosphere.frag" tab="计算单散射积分"
-// [!code word:rayleigh]
-// [!code word:Rayleigh]
-// [!code word:mie]
-// [!code word:Mie]
-// [!code word:absorption]
 vec3 CalculateScattering(vec3 rayOrigin, vec3 rayDirection, float maxDistance, 
     vec3 background, vec3 lightDirection) {
     ...
@@ -44,19 +39,14 @@ vec3 CalculateScattering(vec3 rayOrigin, vec3 rayDirection, float maxDistance,
         }
 
         vec3 combinedDepth = opticalDepth + lightOpticalDepth;
-        vec3 attenuation = exp(-rayleighBeta * combinedDepth.x
-                               - mieBeta * combinedDepth.y
-                               - absorptionBeta * combinedDepth.z);
+        vec3 attenuation = exp(-(rayleighBeta * combinedDepth.x + mieBeta * combinedDepth.y + absorptionBeta * combinedDepth.z));
         totalRayleigh += localDensity.x * attenuation;
         totalMie += localDensity.y * attenuation;
         rayPosition += stepSize;
     }
 
-    vec3 transmittance = exp(-rayleighBeta * opticalDepth.x         
-                             - mieBeta * opticalDepth.y             
-                             - absorptionBeta * opticalDepth.z);    
-    vec3 scatteredLight = (rayleighPhase * rayleighBeta * totalRayleigh     
-                         + miePhase * mieBeta * totalMie) * lightIntensity;     
+    vec3 transmittance = exp(-(rayleighBeta * opticalDepth.x + mieBeta * opticalDepth.y + absorptionBeta * opticalDepth.z));    
+    vec3 scatteredLight = (rayleighPhase * rayleighBeta * totalRayleigh + miePhase * mieBeta * totalMie) * lightIntensity;     
     return scatteredLight + background * transmittance;
 }
 ```
@@ -76,9 +66,9 @@ vec3 AtmosphereDensity(float height) {
 }
 ```
 
-### rayleigh 散射
+### Rayleigh 散射
 
-rayleigh 散射由空气中小分子实现，蓝光比红光更容易被散射。
+Rayleigh 散射由空气中小分子实现，蓝光比红光更容易被散射。
 
 白天，天空蓝光被更多地散射到观察者方向，使天空呈蓝色：
 
@@ -86,10 +76,10 @@ rayleigh 散射由空气中小分子实现，蓝光比红光更容易被散射�
   before="/sky_atmosphere/sky_atmosphere_1993_rayleigh-wo-1.png"
   after="/sky_atmosphere/sky_atmosphere_1993_rayleigh-w-1.png"
   beforeAlt="None"
-  afterAlt="rayleigh"
-  beforeLabel="none"
-  afterLabel="+ rayleigh"
-  caption="rayleigh 散射效果 白天"
+  afterAlt="Rayleigh"
+  beforeLabel="None"
+  afterLabel="+ Rayleigh"
+  caption="Rayleigh 散射效果 白天"
 />
 
 日出和日落时，太阳光经过更长的大气路径，蓝光被大量散射出去，直射太阳光偏橙红色：
@@ -98,60 +88,60 @@ rayleigh 散射由空气中小分子实现，蓝光比红光更容易被散射�
   before="/sky_atmosphere/sky_atmosphere_1993_rayleigh-wo-2.png"
   after="/sky_atmosphere/sky_atmosphere_1993_rayleigh-w-2.png"
   beforeAlt="None"
-  afterAlt="rayleigh"
-  beforeLabel="none"
-  afterLabel="+ rayleigh"
-  caption="rayleigh 散射效果 日落"
+  afterAlt="Rayleigh"
+  beforeLabel="None"
+  afterLabel="+ Rayleigh"
+  caption="Rayleigh 散射效果 日落"
 />
 
 
-### mie 散射
+### Mie 散射
 
 米氏散射通常具有明显的前向散射特征，朝太阳方向观察时会看到更强的亮度和光晕：
   
 <ImageComparison
   before="/sky_atmosphere/sky_atmosphere_1993_mie-wo-1.png"
   after="/sky_atmosphere/sky_atmosphere_1993_mie-w-1.png"
-  beforeAlt="rayleigh"
-  afterAlt="rayleigh + mie"
-  beforeLabel="rayleigh"
-  afterLabel="rayleigh + mie"
-  caption="mie 散射效果"
+  beforeAlt="Rayleigh"
+  afterAlt="Rayleigh + Mie"
+  beforeLabel="Rayleigh"
+  afterLabel="Rayleigh + Mie"
+  caption="Mie 散射效果"
 />
 
 ### 臭氧吸收
 
 臭氧层对绿光吸收最强，对红光次之，对蓝光吸收最弱。
 
-日出、日落时，光在大气中的传播路径变长，臭氧使部分区域呈现更明显的蓝紫色或粉紫色过渡：
+日出、日落时，光在大气中的传播路径变长，绿光和红光大部分被吸收，天空呈现蓝紫色或粉紫色过渡：
 
 <ImageComparison
   before="/sky_atmosphere/sky_atmosphere_1993_absorption-wo-2.png"
   after="/sky_atmosphere/sky_atmosphere_1993_absorption-w-2.png"
-  beforeAlt="rayleigh + mie"
-  afterAlt="rayleigh + mie + absorption"
-  beforeLabel="rayleigh + mie"
-  afterLabel="rayleigh + mie + absorption"
+  beforeAlt="Rayleigh + Mie"
+  afterAlt="Rayleigh + Mie + Absorption"
+  beforeLabel="Rayleigh + Mie"
+  afterLabel="Rayleigh + Mie + Absorption"
   caption="臭氧吸收效果 地面"
   />
 
-从太空观察时，大气分子产生的 rayleigh 散射使行星边缘呈现蓝色光环，臭氧吸收进一步削弱部分红光和绿光：
+从太空观察时，大气分子产生的 Rayleigh 散射使行星边缘呈现蓝色光环，臭氧吸收进一步削弱部分红光和绿光：
 
 <ImageComparison
   before="/sky_atmosphere/sky_atmosphere_1993_absorption-wo-1.png"
   after="/sky_atmosphere/sky_atmosphere_1993_absorption-w-1.png"
-  beforeAlt="rayleigh + mie"
-  afterAlt="rayleigh + mie + absorption"
-  beforeLabel="rayleigh + mie"
-  afterLabel="rayleigh + mie + absorption"
+  beforeAlt="Rayleigh + Mie"
+  afterAlt="Rayleigh + Mie + Absorption"
+  beforeLabel="Rayleigh + Mie"
+  afterLabel="Rayleigh + Mie + Absorption"
   caption="臭氧吸收效果 星球"
 />
   
-## 查找表加速实现
+## 查找表加速实现单次散射
 
 <Cards>
   <Card icon={<SiGithub />} href="https://github.com/j1n9h3/Alpha3D/blob/v0.1.9/shaders/sky_atmosphere/sky_atmosphere.frag" title="实现代码 Alpha3D v0.1.9">
-    实时大气散射快速查找实现，报刊 Sky-View LUT 和 Transmittance LUT 两张查找表
+    实时大气散射快速查找实现，报刊 Sky-view LUT 和 Transmittance LUT 两张查找表
   </Card>
   <Card icon={<SiAcm />} href="https://sebh.github.io/publications/egsr2020.pdf" title="参考论文 Hillaire 2020">
     Hillaire et al. A Scalable and Production Ready Sky and Atmosphere Rendering Technique, 2020
@@ -162,8 +152,9 @@ rayleigh 散射由空气中小分子实现，蓝光比红光更容易被散射�
 
 
 ```mermaid
-xychart horizontal
-x-axis [2k, 1080p, 800x600]
+xychart
+title "Table 1. GPU time under different acceleration methods and resolutions"
+x-axis [2048x1080 Resolution, 1920x1080 Resolution, 800x600 Resolution]
 bar [43.7, 22.7, 3.67]
 bar [2.551, 1.302, 0.258]
 bar [1.103, 0.523, 0.110]
@@ -171,7 +162,7 @@ bar [1.103, 0.523, 0.110]
 
 - Bar1：由双重积分暴力实现；
 - Bar2：在 Bar1 的基础上加入 64 light-steps Transmittance LUT；
-- Bar3：在 Bar2 的基础上加上了 Sky-View LUT。
+- Bar3：在 Bar2 的基础上加上了 Sky-view LUT。
 
 
 
@@ -195,12 +186,8 @@ vec3 integrateAtmosphereScattering(vec3 rayOrigin, vec3 rayDirection, float maxD
 
 		vec3 viewTransmittance = exp(-rayleighBeta * opticalDepth.x - mieBeta * opticalDepth.y - absorptionBeta * opticalDepth.z);
 
-		if (useTransmittanceLUT) { // [!code ++]
-			attenuation = viewTransmittance * SampleTransmittanceLUT(samplePosition, lightDirection); // [!code highlight] 
-		} // [!code ++]
-		else { 
-			attenuation = viewTransmittance * computeTransmittance(samplePosition, lightDirection, lightSampleCount);
-		}
+		if (useTransmittanceLUT) attenuation = viewTransmittance * SampleTransmittanceLUT(samplePosition, lightDirection); // [!code ++] 
+		else attenuation = viewTransmittance * computeTransmittance(samplePosition, lightDirection, lightSampleCount);
 
 		totalRayleigh += localDensity.x * attenuation;
 		totalMie += localDensity.y * attenuation;
@@ -262,17 +249,12 @@ vec3 computeTransmittance(vec3 position, vec3 direction, int sampleCount) {
     // The midpoint rule avoids sampling exactly on either spherical boundary.
     for (int i = 0; i < sampleCount; ++i) {
         float distanceAlongRay = (float(i) + 0.5) * stepLength;
-        float sampleRadius = sqrt(max(
-            viewHeight * viewHeight
-            + distanceAlongRay * distanceAlongRay
-            + 2.0 * viewHeight * viewZenithCos * distanceAlongRay,
-            planetRadius * planetRadius));
+        float sampleRadius = sqrt(max(viewHeight * viewHeight + distanceAlongRay * distanceAlongRay
+            + 2.0 * viewHeight * viewZenithCos * distanceAlongRay, planetRadius * planetRadius));
         opticalDepth += AtmosphereDensity(sampleRadius - planetRadius) * stepLength;
     }
 
-    vec3 extinction = rayleighBeta * opticalDepth.x
-                    + mieBeta * opticalDepth.y
-                    + absorptionBeta * opticalDepth.z;
+    vec3 extinction = rayleighBeta * opticalDepth.x + mieBeta * opticalDepth.y + absorptionBeta * opticalDepth.z;
     return exp(-max(extinction, vec3(0.0)));
 }
 ```
@@ -293,7 +275,7 @@ void uvToTransmittanceParams(vec2 uv, out float viewHeight, out float viewZenith
 }
 ```
 
-Transmittance LUT 记录光线积分部分，后续计算 Sky-View LUT 等直接查询，LUT如下：
+Transmittance LUT 记录光线积分部分，后续计算 Sky-view LUT 等直接查询，LUT如下：
 
 <OssImage
   src="sky_atmosphere/sky_atmosphere_2020_transmittance_lut.png"
@@ -308,7 +290,7 @@ Transmittance LUT 记录光线积分部分，后续计算 Sky-View LUT 等直接
 增加地面遮挡判断，保证日落时地球背对太阳的那一侧天空是黑的，否则会有奇怪的漏光。
 
 
-```glsl  title="shaders/sky_atmosphere.frag" tab="增加视线与地面求交部分"
+```glsl  title="shaders/sky_atmosphere.frag" tab="视线积分修改"
 for (int i = 0; i < viewSampleCount; ++i) {
     float rayPosition = rayStart + (float(i) + 0.5) * stepSize;
     vec3 samplePosition = rayOrigin + rayDirection * rayPosition;
@@ -320,11 +302,11 @@ for (int i = 0; i < viewSampleCount; ++i) {
     float zenithCos = dot(samplePosition / radius, lightDirection);
     vec3 viewTransmittance = exp(-Extinction(opticalDepth));
     vec2 groundHit = RaySphereIntersect(samplePosition, lightDirection, planetRadius); // [!code ++]
-    vec3 lightTransmittance = vec3(0.0);
+    vec3 lightTransmittance = vec3(0.0); // [!code ++]
     if (groundHit.y <= 0.0) {  // [!code ++]
-        lightTransmittance = useTransmittanceLUT
-            ? SampleTransmittanceLUT(radius, zenithCos)
-            : transmittance(radius, zenithCos, lightSampleCount);
+        lightTransmittance = useTransmittanceLUT // [!code ++]
+            ? SampleTransmittanceLUT(radius, zenithCos) // [!code ++]
+            : transmittance(radius, zenithCos, lightSampleCount); // [!code ++]
     } // [!code ++]
     vec3 attenuation = viewTransmittance * lightTransmittance;
 
@@ -358,7 +340,7 @@ vec2 RaySphereIntersect(vec3 origin, vec3 direction, float radius) {
 
 </Callout>
 
-### Sky-View LUT
+### Sky-view LUT
 
 
 采样 LUT 的主要流程如下：
@@ -384,7 +366,7 @@ vec3 integrateAtmosphereScattering(vec3 rayOrigin, vec3 rayDirection, float maxD
 		vec3 viewTransmittance = useTransmittanceLUT  // [!code ++]
 			? SampleTransmittanceLUT(viewHeight, viewZenithCosAngle)  // [!code ++]
 			: transmittance(viewHeight, viewZenithCosAngle, max(lightSteps, 1));  // [!code ++]
-		return texture(skyViewLUT, skyViewUV).rgb + background * viewTransmittance;  // [!code highlight]
+		return texture(skyViewLUT, skyViewUV).rgb + background * viewTransmittance;  // [!code ++]
 	}  // [!code ++]
 
 	...
@@ -496,5 +478,12 @@ void uvToSkyViewParams(out float viewZenithCos, out float lightViewCos, float vi
   alt="sky_atmosphere_sky_view_lut"
   width={1920}
   height={1080}
-  caption="Sky-View LUT 纹理"
+  caption="Sky-view LUT 纹理"
 />
+
+
+## 基础空气透视方法实现
+
+{/* ## 查找表加速实现空气透视 */}
+
+{/* ## 查找表加速实现多次散射 */}

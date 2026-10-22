@@ -1,0 +1,1 @@
+ ossutil sync C:/Users/17912/Projects/pages/images oss://j1n9h3/ --update

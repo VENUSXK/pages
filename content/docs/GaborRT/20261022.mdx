@@ -1,0 +1,275 @@
+---
+title: 实验-20261022
+description: 在 2026 年 Gabor Field 工作复现我们的数据集
+---
+
+### 训练
+
+
+
+### 测试0
+
+<Card
+  title="完整实现代码"
+  href="https://github.com/j1n9h3/Alpha3D/blob/v0.1.8/shaders/sky_atmosphere/render_transmittance_lut.frag"
+>
+Alpha3D v0.1.8
+</Card>
+
+```shell title="shell" tab="训练 command"
+WANDB_MODE=disabled bash examples/train.sh \
+  data/volumes/[data_name].npy \
+  --output results/checkpoints/[output_path] \
+  --opacity_scale 10.0 \
+  --gauss_count 1024 \
+  --gabor_count 24576 \
+  --ref_spp_chunk 64 \
+  --opt_cam_batch 1
+```
+
+```sh title="shell"   tab="渲染 command"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/[checkpoint_name]/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --use_perspective_cam \
+  --cam_fov 60 \
+  --cam_distance 2.5 \
+  --cam_count 8 \
+  --cam_index 0 \
+  --cam_elevation 45 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 4096 \
+  --cam_res_y 4096 \
+  --spp 64 \
+  --max_depth 10 \
+  --rr_depth 10 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 1.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --output results/renders/[render_dir]
+  # --max_level 1 \ # gaussian or gaussian+gabor
+```
+
+<ImageComparison
+  before="/experiments/20261022-optimized-pyr0-4096x4096-128spp-1opacity.png"
+  after="/experiments/20261022-optimized-pyr1-4096x4096-128spp-1opacity.png"
+  beforeAlt="20261022-optimized-pyr0-4096x4096-128spp-1opacity"
+  afterAlt="20261022-optimized-pyr1-4096x4096-128spp-1opacity"
+  beforeLabel={"gaussian 1024\nspp 128\nopacity_scaler 1.0\nrendering_time 251,909 ms"}
+  afterLabel={"gaussian 1024\ngabor 24576\nspp 128\nopacity_scaler 1.0\nrendering_time 2,027,848 ms"}
+  caption="pyr0 与 pyr1 渲染对比"
+/>
+
+
+### 多重散射测试
+
+multi scattering 根据 max depth 决定散射层数，这里对比了不同散射深度的结果。
+
+```bash title="render command" tab="max_depth 2"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 2 \    #[!code highlight]
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --render_all_cams \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 0 \
+  --output results/renders/LS-20261008_y100_official_gabor
+```
+
+```bash title="render command" tab="max_depth 10"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 10 \  #[!code highlight]
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --render_all_cams \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 0 \
+  --output results/renders/LS-20261008_y100_official_gabor
+```
+
+{(() => {
+  const depth2_time = ["6,165.05", "5,703.44", "5,951.13", "5,802.93", "5,920.72", "5,758.13", "5,890.91", "5,721.78"];
+  const depth10_time = ["16,999.31", "16,300.60", "17,033.10", "16,745.14", "17,012.97", "16,518.64", "16,721.10", "16,279.13"];
+  return depth2_time.map((time2, i) => {
+    const cam = `cam${String(i).padStart(2, "0")}`;
+    return (
+      <ImageComparison
+        key={cam}
+        before={`/experiments/20261022-optimized-pyr0-1920x1080-32spp-1opacity-2maxdepth/render_${cam}.png`}
+        after={`/experiments/20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
+        beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-2maxdepth"
+        afterAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
+        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 2\nrendering_time ${time2} ms`}
+        afterLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${depth10_time[i]} ms`}
+        caption="多重散射测试"
+      />
+    );
+  });
+})()}
+
+### Gabor 测试
+
+对比测试 gaussian 和 gabor 拟合效果，采用 1024 个 gaussian 核，24576 个 gabor 核。
+
+```bash title="render command" tab="gaussian only"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --render_all_cams \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 0 \  #[!code highlight]
+  --output results/renders/LS-20261008_y100_official_gabor
+```
+
+
+```bash title="render command" tab="gaussian + gabor"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --render_all_cams \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 1 \   #[!code highlight]
+  --output results/renders/LS-20261008_y100_official_gabor
+```
+
+
+
+{/* 每台相机的渲染耗时（Total time sync, ms），下标顺序对应 cam00…cam07 */}
+{(() => {
+  const pyr0_time = ["16,999.31", "16,300.60", "17,033.10", "16,745.14", "17,012.97", "16,518.64", "16,721.10", "16,279.13"];
+  const pyr1_time = ["121,858.95", "117,955.60", "123,540.86", "119,464.15", "122,535.70", "119,242.61", "123,135.10", "118,671.29"];
+  return pyr0_time.map((time0, i) => {
+    const cam = `cam${String(i).padStart(2, "0")}`;
+    return (
+      <ImageComparison
+        key={cam}
+        before={`/experiments/20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
+        after={`/experiments/20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
+        beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
+        afterAlt="20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth"
+        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${time0} ms`}
+        afterLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${pyr1_time[i]} ms`}
+        caption="Gabor 测试"
+      />
+    );
+  });
+})()}
+
+
+### Groud-truth 比较
+
+{/* 每台相机的渲染耗时（Total time sync, ms），下标顺序对应 cam00…cam07 */}
+{(() => {
+  const pyr0_time = ["16,999.31", "16,300.60", "17,033.10", "16,745.14", "17,012.97", "16,518.64", "16,721.10", "16,279.13"];
+  const pyr1_time = ["121,858.95", "117,955.60", "123,540.86", "119,464.15", "122,535.70", "119,242.61", "123,135.10", "118,671.29"];
+  return pyr0_time.map((time0, i) => {
+    const cam = `cam${String(i).padStart(2, "0")}`;
+    return (
+      <ImageComparison
+        key={cam}
+        before={`/experiments/20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
+        after={`experiments/20261022-ground_truth-1920x1080-32spp-1opacity-10maxdepth/LS-20261008_groundtruth_0_${cam}.png`}
+        beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
+        afterAlt="20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth"
+        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${time0} ms`}
+        afterLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${pyr1_time[i]} ms`}
+        caption="Gabor 测试"
+      />
+    );
+  });
+})()}

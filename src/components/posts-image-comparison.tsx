@@ -30,7 +30,7 @@ function ImageComparisonInner({
   afterLabel = "处理后",
 }: ImageComparisonProps) {
   return (
-    <div className="not-prose my-0 block aspect-video w-full overflow-hidden rounded-lg">
+    <div className="not-prose my-8 block aspect-video w-full overflow-hidden rounded-lg">
         <ReactCompareSlider
         itemOne={
             <div className="relative h-full w-full">
@@ -40,7 +40,7 @@ function ImageComparisonInner({
                 className="h-full w-full object-cover"
             />
 
-            <span className="absolute left-4 bottom-4 rounded bg-black/60 px-3 py-1 text-sm text-white">
+            <span className="absolute left-4 bottom-4 whitespace-pre-line rounded bg-black/60 px-3 py-1 text-sm text-white">
                 {beforeLabel}
             </span>
             </div>
@@ -53,7 +53,7 @@ function ImageComparisonInner({
                 className="h-full w-full object-cover"
             />
 
-            <span className="absolute right-4 bottom-4 rounded bg-black/60 px-3 py-1 text-sm text-white">
+            <span className="absolute right-4 bottom-4 whitespace-pre-line rounded bg-black/60 px-3 py-1 text-sm text-white">
                 {afterLabel}
             </span>
             </div>
