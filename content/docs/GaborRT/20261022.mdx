@@ -1,6 +1,6 @@
 ---
 title: 实验-20261022
-description: 基于Gabor Field工作渲染LS台风数据数据集
+description: 基于 Gabor Field 工作渲染 LS 台风数据数据集
 ---
 
 
@@ -8,7 +8,7 @@ description: 基于Gabor Field工作渲染LS台风数据数据集
   <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3811369" title="ACM Journals">
   主要参考论文 Gabor Fields
   </Card>
-  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/abs/10.1145/166117.166140" title="ACM Journals">
+  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3711853" title="ACM Journals">
   同作者相关论文 Don't Splat your Gaussians
   </Card>
   <Card icon={<SiGithub />} href="https://github.com/VENUSXK/gabor_fields/tree/experiment-20261022" title="Github">
@@ -19,16 +19,16 @@ description: 基于Gabor Field工作渲染LS台风数据数据集
   </Card>
 </Cards>
 
-
-| 配置 |
+| 实验环境 |
 | --- |
 | Intel Core i7-14700KF |
 | NVIDIA GeForce RTX 4090 D（24 GB GDDR6X） |
 | 64 GB DDR5-4800（2 × 32 GB） |
 | Ubuntu 26.04.1 LTS |
 
+训练 command：
 
-```shell title="shell" tab="训练 command"
+```shell title="shell" 
 WANDB_MODE=disabled bash examples/train.sh \
   data/volumes/[data_name].npy \
   --output results/checkpoints/[output_path] \
