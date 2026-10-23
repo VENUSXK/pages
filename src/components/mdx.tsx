@@ -6,7 +6,7 @@ import { ImageComparison } from '@/components/posts-image-comparison';
 import { ImageSequenceSlider } from '@/components/posts-image-sequence-slider';
 
 import { GithubInfo } from 'fumadocs-ui/components/github-info';
-import { SiOpengl, SiGithub, SiArxiv, SiAcm } from "react-icons/si";
+import { SiGoogledrive, SiOpengl, SiGithub, SiArxiv, SiAcm } from "react-icons/si";
 
 import { Mermaid } from '@/components/mdx/mermaid';
 
@@ -20,7 +20,7 @@ export function getMDXComponents(components?: MDXComponents) {
     ImageSequenceSlider,
     GithubInfo, 
     Mermaid,
-    SiOpengl, SiGithub, SiArxiv, SiAcm,
+    SiGoogledrive, SiOpengl, SiGithub, SiArxiv, SiAcm,
     ...TabsComponents,
     ...components,
   } satisfies MDXComponents;
