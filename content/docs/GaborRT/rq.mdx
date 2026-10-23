@@ -2,6 +2,16 @@
 title: 研究问题汇总
 ---
 
+<Cards>
+  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3811369" title="ACM Journals">
+  Gabor Fields, SIGGRAPH Asia 2026
+  </Card>
+  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3711853" title="ACM Journals">
+  Don't Splat your Gaussians, SIGGRAPH 2025
+  </Card>
+</Cards>
+
+
 Gabor Field 方法主要面向 ray tracing，没有考虑 real-time 上的情况，考虑做工作 GaborRT，把这篇工作应用到实时，想到一些方法：
 
 1. 低频-高频渲染分离，比如太阳阴影只使用 Gaussian 低频层，低频 Gaussian 层承担绝大部分密度和光学厚度，低频做光照 probe；高频 Gabor 只恢复边缘、细丝和湍流细节；
@@ -34,3 +44,4 @@ $$
     10 GB+ 的数据无法直接放进 GPU（比如多帧 4 GB 数据），可以用我们的方法解决这个问题。
   </Accordion>
 </Accordions>
+

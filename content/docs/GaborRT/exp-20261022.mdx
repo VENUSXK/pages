@@ -2,16 +2,10 @@
 title: 实验-20261022
 ---
 
-主要实验内容：基于 Gabor Field 工作渲染 LS 台风数据数据集，测试 Gabor Fields 工作的边界
+实验内容：基于 Gabor Field 工作渲染 LS 台风数据数据集，测试 Gabor Fields 工作的边界
 
 
 <Cards>
-  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3811369" title="ACM Journals">
-  主要参考论文 Gabor Fields
-  </Card>
-  <Card icon={<SiAcm />} href="https://dl.acm.org/doi/10.1145/3711853" title="ACM Journals">
-  同作者相关论文 Don't Splat your Gaussians
-  </Card>
   <Card icon={<SiGithub />} href="https://github.com/VENUSXK/gabor_fields/tree/experiment-20261022" title="Github">
     Fork Gabor Field 工作，主要改变了部署和渲染部分的代码
   </Card>
@@ -73,7 +67,7 @@ xychart-beta
   line [21.857021331787109, 23.199417114257812, 24.495267868041992, 26.106435775756836, 26.733371734619141, 25.759737014770508, 27.128374099731445, 29.018993377685547, 29.646184921264648, 30.636819839477539, 31.110586166381836, 31.689085006713867, 32.288887023925781, 32.842006683349609, 33.318614959716797, 33.720062255859375, 34.012123107910156, 34.277217864990234, 34.518199920654297, 34.712635040283203, 34.8736572265625, 35.009040832519531, 35.084945678710938, 35.263023376464844]
 ```
 
-Line 1 表示 pyr0 (gaussian only) 的 PSNR 数据，Line 2 表示 pyr1 (gaussian + gabor) 的 PSNR 数据。
+Line 1 表示 pyr0 (gaussian only) 的 PSNR 数据，Line 2 表示 pyr1 (gaussian + gabor) 的 PSNR 数据
 
 
 SSIM 量化：
@@ -86,7 +80,7 @@ xychart-beta
   line [0.23695950210094452, 0.17756873369216919, 0.13774830102920532, 0.10422659665346146, 0.10856654495000839, 0.12675240635871887, 0.083714030683040619, 0.065805219113826752, 0.051884807646274567, 0.044938899576663971, 0.043801065534353256, 0.038012456148862839, 0.034218624234199524, 0.031369801610708237, 0.029272411018610001, 0.027692932635545731, 0.027810387313365936, 0.026396408677101135, 0.025428935885429382, 0.024781718850135803, 0.024331320077180862, 0.023998051881790161, 0.024384081363677979, 0.023851361125707626]
 ```
 
-Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM 数据，Line 2 表示 ssim_pyr1 (gaussian + gabor) 的 SSIM 数据。
+Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM 数据，Line 2 表示 ssim_pyr1 (gaussian + gabor) 的 SSIM 数据
 
 ##  groud-truth 比较
 
@@ -172,7 +166,7 @@ Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM 数据，Line 2 表示 ssim_pyr
 
 ##  pyr0 和 pyr1 比较
 
-对比测试 gaussian 和 gabor 拟合效果，采用 1024 个 gaussian 核，24576 个 gabor 核。
+对比测试 gaussian 和 gabor 拟合效果，采用 1024 个 gaussian 核，24576 个 gabor 核
 
 ```bash title="render command" tab="gaussian only"
 .venv/bin/python -m gfields.render \
@@ -265,7 +259,7 @@ Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM 数据，Line 2 表示 ssim_pyr
 
 ##  multi scattering 测试
 
-multi scattering 根据 max depth 决定散射层数，这里对比了不同散射深度的结果。
+multi scattering 根据 max depth 决定散射层数，这里对比了不同散射深度的结果
 
 ```bash title="render command" tab="max_depth 2"
 .venv/bin/python -m gfields.render \
@@ -355,15 +349,15 @@ multi scattering 根据 max depth 决定散射层数，这里对比了不同散�
 
 验证了 Gabor Field 工作在 LS 数据集整体上是可行的，但是还有很多局限性：
 
-- Gabor Field 拟合的体积场是立方体，而 LS 的数据集在垂直层面是稀疏的（30层），Gabor Field 拟合时需要将稀疏数据集补 0，此时内存开销非常大；
+- Gabor Field 拟合的体积场是立方体，而 LS 的数据集在垂直层面是稀疏的（30层），Gabor Field 拟合时需要将稀疏数据集补 0，此时内存开销非常大 
 - Gabor Field 最多支持 1268 × 1268 × 1268 的 voxel 数据 (2.04 billion voxels, 最多支持 float32 表示的 7.76 GB 数据)
- ，大纹理只能支持下采样，才能拟合。
+ ，大纹理只能支持下采样，才能拟合
 
 此外 Gabor Field 方法主要面向 ray tracing，没有考虑 real-time 上的情况，考虑做工作 GaborRT，把这篇工作应用到实时，想到一些方法：
 
-1. 低频-高频渲染分离，比如太阳阴影只使用 Gaussian 低频层，低频 Gaussian 层承担绝大部分密度和光学厚度，低频做光照 probe；高频 Gabor 只恢复边缘、细丝和湍流细节；
-2. 屏幕空间频率裁剪，如果某个 Gabor 的频率高于当前像素能够分辨的范围，直接跳过；
-3. 渲染时先根据相机距离、射线方向、目标质量排除整个频率层或方向簇，然后再做空间求交。比逐基元执行方向判断更有机会真正减少 BVH 遍历成本；
+1. 低频-高频渲染分离，比如太阳阴影只使用 Gaussian 低频层，低频 Gaussian 层承担绝大部分密度和光学厚度，低频做光照 probe；高频 Gabor 只恢复边缘、细丝和湍流细节 
+2. 屏幕空间频率裁剪，如果某个 Gabor 的频率高于当前像素能够分辨的范围，直接跳过 
+3. 渲染时先根据相机距离、射线方向、目标质量排除整个频率层或方向簇，然后再做空间求交比逐基元执行方向判断更有机会真正减少 BVH 遍历成本 
 4. 提出适合 GPU 实时计算、具有质量—性能控制的解析积分近似，原始解析式可以作为 ground truth，然后设计 LUT、Chebyshev 或有理函数近似提速，提出适合 GPU 实时计算、具有质量—性能控制的解析积分近似：
 
 $$
@@ -372,16 +366,14 @@ I_{\text{approx}}-I_{\text{analytic}}
 \right|<\varepsilon
 $$
 
-5. TAA 时域累计，时空随机重建，研究一些去噪方法等；
-6. 参照寒霜引擎做多重散射近似。
+5. TAA 时域累计，时空随机重建，研究一些去噪方法等 
+6. 参照寒霜引擎做多重散射近似
 
 计划比较方法：
 
-- Gabor Fields + Gaussian Field；
-- 原始 Gaussian Primitive Volumes；
-- 稠密 3D 纹理 ray marching；
-- 分块纹理＋占用网格；
-- NanoVDB/OpenVDB 稀疏存储方法；
-- EVER 或相关实时体积基元方法。
-
-如果 4 GB 数据已经放得进 GPU，为什么不用纹理 ray marching？比如 10 GB 的数据无法直接放进 GPU（比如多帧 4 GB 数据），可以用我们的方法解决这个问题。
+- Gabor Fields + Gaussian Field 
+- 原始 Gaussian Primitive Volumes 
+- 稠密 3D 纹理 ray marching 
+- 分块纹理＋占用网格 
+- NanoVDB/OpenVDB 稀疏存储方法 
+- EVER 或相关实时体积基元方法
