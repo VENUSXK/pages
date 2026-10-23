@@ -1,0 +1,36 @@
+---
+title: 研究问题汇总
+---
+
+Gabor Field 方法主要面向 ray tracing，没有考虑 real-time 上的情况，考虑做工作 GaborRT，把这篇工作应用到实时，想到一些方法：
+
+1. 低频-高频渲染分离，比如太阳阴影只使用 Gaussian 低频层，低频 Gaussian 层承担绝大部分密度和光学厚度，低频做光照 probe；高频 Gabor 只恢复边缘、细丝和湍流细节；
+2. 屏幕空间频率裁剪，如果某个 Gabor 的频率高于当前像素能够分辨的范围，直接跳过；
+3. 渲染时先根据相机距离、射线方向、目标质量排除整个频率层或方向簇，然后再做空间求交。比逐基元执行方向判断更有机会真正减少 BVH 遍历成本；
+4. 提出适合 GPU 实时计算、具有质量—性能控制的解析积分近似，原始解析式可以作为 ground truth，然后设计 LUT、Chebyshev 或有理函数近似提速，提出适合 GPU 实时计算、具有质量—性能控制的解析积分近似：
+
+$$
+\left|
+I_{\text{approx}}-I_{\text{analytic}}
+\right|<\varepsilon
+$$
+
+5. TAA 时域累计，时空随机重建，研究一些去噪方法等；
+6. 参照寒霜引擎做多重散射近似。
+
+计划比较方法：
+
+- Gabor Fields + Gaussian Field；
+- 原始 Gaussian Primitive Volumes；
+- 稠密 3D 纹理 ray marching；
+- 分块纹理＋占用网格；
+- NanoVDB/OpenVDB 稀疏存储方法；
+- EVER 或相关实时体积基元方法。
+
+可能的 Review 问题：
+
+<Accordions>
+  <Accordion title="如果 4 GB 数据已经放得进 GPU，为什么不用纹理 ray marching？">
+    10 GB+ 的数据无法直接放进 GPU（比如多帧 4 GB 数据），可以用我们的方法解决这个问题。
+  </Accordion>
+</Accordions>

@@ -7,6 +7,7 @@ import { ImageSequenceSlider } from '@/components/posts-image-sequence-slider';
 
 import { GithubInfo } from 'fumadocs-ui/components/github-info';
 import { SiGoogledrive, SiOpengl, SiGithub, SiArxiv, SiAcm } from "react-icons/si";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
 
 import { Mermaid } from '@/components/mdx/mermaid';
 
@@ -21,6 +22,7 @@ export function getMDXComponents(components?: MDXComponents) {
     GithubInfo, 
     Mermaid,
     SiGoogledrive, SiOpengl, SiGithub, SiArxiv, SiAcm,
+    Accordion, Accordions,
     ...TabsComponents,
     ...components,
   } satisfies MDXComponents;
