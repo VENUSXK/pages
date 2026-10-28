@@ -1,0 +1,324 @@
+---
+title: C++ 片段
+---
+
+几个常用 C++ 知识点速记。
+
+## 内存布局
+
+### 成员字节偏移
+
+`offsetof(Point, y)` 返回成员 `y` 距 `Point` 对象起始地址的字节数，返回类型是 `std::size_t`。
+
+```cpp
+struct Point {
+    double x;   // 从第 0 字节开始
+    double y;   // 从第 8 字节开始
+    int tag;    // 从第 16 字节开始
+};
+```
+
+```cpp
+offsetof(Point, x);   // 0
+offsetof(Point, y);   // 8
+offsetof(Point, tag); // 16
+```
+
+需要 `#include <cstddef>`。
+
+**为什么不直接写数字**：写死偏移不可靠，因为编译器会为内存对齐在成员之间插入填充字节：
+
+```cpp
+struct Example {
+    char a;
+    int b;
+};
+
+offsetof(Example, b); // 4，而不是 1
+```
+
+`offsetof` 让编译器按真实内存布局计算，避免对齐问题。
+
+**使用限制**：`offsetof` 只适用于**标准布局类型**，可加校验：
+
+```cpp
+static_assert(std::is_standard_layout_v<Point>); // #include <type_traits>
+```
+
+## 类型转换
+
+### 显式类型转换
+
+```cpp
+std::vector<int> values{1, 2, 3};
+int count = static_cast<int>(values.size());
+```
+
+作用：把 `size()` 返回的 `size_t` 明确转换成 `int`。
+
+**为什么要转换**：
+
+```cpp
+values.size(); // std::size_t，64 位程序中通常 64 位
+int count;     // int，通常 32 位
+```
+
+`vector::size()` 返回 `size_type`（通常等价 `std::size_t`），与 `int` 类型不一致，所以需要 `static_cast` 显式转换。
+
+**为什么不用 C 风格转换**：
+
+```cpp
+(int)values.size();              // C 风格
+static_cast<int>(values.size()); // C++ 风格（推荐）
+```
+
+- `static_cast` 意图明确、检查严格，不相关指针类型之间转换会直接编译报错；
+- C 风格转换能力过强，可能同时相当于 `static_cast` / `const_cast` / `reinterpret_cast`，容易隐藏危险操作；
+- `static_cast` 在大型项目中更容易搜索。
+
+C++ 的四种具名转换：
+
+```cpp
+static_cast<T>(value)       // 普通数值、继承关系等转换
+dynamic_cast<T>(value)      // 多态类型的运行时安全转换
+const_cast<T>(value)        // 添加或移除 const/volatile
+reinterpret_cast<T>(value)  // 底层指针或位模式重解释
+```
+
+**会不会丢失数据**：如果 `size()` 结果超过目标类型上限会截断。需要严格检查时：
+
+```cpp
+if (values.size() > std::numeric_limits<int>::max()) {
+    throw std::overflow_error("Too many elements");
+}
+```
+
+## 容器
+
+### 动态数组
+
+`std::vector` 是标准库的动态数组容器，可随元素数量自动扩容（`#include <vector>`）。
+
+```cpp
+std::vector<int> numbers;
+numbers.push_back(10);
+numbers.push_back(20);
+numbers.push_back(30); // [10, 20, 30]
+```
+
+```cpp
+numbers[0];    // 不检查越界，越界是未定义行为
+numbers.at(1); // 检查越界，越界抛异常
+```
+
+**常见创建方式**：
+
+```cpp
+std::vector<int> a;          // 空
+std::vector<int> b{1, 2, 3}; // [1, 2, 3]
+std::vector<int> c(5);       // [0, 0, 0, 0, 0]
+std::vector<int> d(5, 10);   // [10, 10, 10, 10, 10]
+```
+
+```cpp
+std::vector<int> x{5}; // 一个元素 [5]
+std::vector<int> y(5); // 五个元素 [0, 0, 0, 0, 0]
+```
+
+**常用操作**：
+
+```cpp
+values.push_back(x); // 末尾添加
+values.pop_back();   // 删除最后一个
+values.size();       // 元素数量
+values.empty();      // 是否为空
+values.clear();      // 清空
+```
+
+```cpp
+values.front(); // 第一个元素
+values.back();  // 最后一个元素
+values.data();  // 底层连续内存指针
+```
+
+```cpp
+values.resize(10);   // 实际创建 10 个元素，size() 变 10
+values.reserve(100); // 只预留内存，size() 不变
+```
+
+**遍历**：
+
+```cpp
+for (int value : values) {}        // 复制
+for (int& value : values) {}       // 需要修改时
+for (const int& value : values) {} // 避免复制大对象
+```
+
+元素存储在连续内存中，扩容重分配后旧指针/引用/迭代器可能失效，提前知道数量可 `reserve()`。
+
+### 获取容器首元素指针
+
+`.data()` 是 `std::vector`、`std::array` 等容器的成员函数，返回容器内部第一个元素的指针。
+
+```cpp
+std::array<int, 3> numbers{10, 20, 30};
+
+numbers;        // 整个容器（std::array<int, 3>）
+numbers[0];     // 第一个元素（int）
+numbers.data(); // 指向第一个元素的指针（int*）
+```
+
+**为什么不能直接传容器**：需要指针 `const int*` 的接口，容器是类对象，不能隐式转换成指针：
+
+```cpp
+void PrintAll(const int* data, std::size_t count);
+
+PrintAll(numbers, numbers.size());         // 错误：容器不能转指针
+PrintAll(numbers.data(), numbers.size());  // 正确
+```
+
+**等价于什么**：容器非空时，`.data()` 等价于 `&container[0]`，但推荐 `.data()`：
+
+- 意图更清楚、写法统一；
+- 空容器时 `.data()` 可以安全调用（只是不能解引用），而 `&container[0]` 访问了不存在的元素。
+
+**不是数据副本**：`.data()` 不复制数据，返回的是容器内部已有元素的地址：
+
+```cpp
+std::vector<int> numbers{10, 20, 30};
+int* pointer = numbers.data();
+pointer[1] = 100; // numbers 变成 {10, 100, 30}
+```
+
+**与 C 数组的区别**：C 数组在大多数表达式中会自动转换为首元素指针，而 `std::array` / `std::vector` 是类对象，不会自动转指针：
+
+```cpp
+int numbers[3]{10, 20, 30};
+int* p = numbers; // C 数组自动转 &numbers[0]
+```
+
+```cpp
+std::array<int, 3> arr{10, 20, 30};
+// int* p = arr;     // 错误
+int* p = arr.data(); // 正确
+```
+
+### 容器大小与元素总大小
+
+对于 `std::vector<Vertex>`，两者含义完全不同：
+
+```cpp
+sizeof(vertices);                      // vector 对象本身的大小
+sizeof(vertices[0]) * vertices.size(); // 所有元素的总字节数
+```
+
+`sizeof(vertices)` 计算的是 `std::vector` 对象本身占用的空间，不包括它动态分配的顶点数据。对象内部通常只保存「首地址、元素数量、已分配容量」，64 位程序里常见结果约 24 字节，且不随元素数量变化：
+
+```cpp
+std::vector<Vertex> a;
+std::vector<Vertex> b(1000000);
+sizeof(a) == sizeof(b); // 通常成立，元素存在另一块动态内存里
+```
+
+`sizeof(vertices[0])` 等于 `sizeof(Vertex)`（单个元素大小），乘以 `vertices.size()` 就是总字节数：
+
+```text
+总字节数 = 单个元素大小 × 元素数量
+```
+
+需要拷贝或写出全部元素数据时，应该用后者：
+
+```cpp
+memcpy(destination, vertices.data(), sizeof(Vertex) * vertices.size());
+```
+
+三者配合：
+
+```cpp
+vertices.data(); // 元素数据首地址
+vertices.size(); // 元素数量
+sizeof(Vertex);  // 单个元素大小
+```
+
+不要写 `sizeof(vertices)`，那只得到 vector 管理对象的大小。
+
+**普通 C 数组则不同**：`sizeof(vertices)` 包含整个数组数据：
+
+```cpp
+Vertex vertices[100];
+sizeof(vertices) == sizeof(vertices[0]) * 100;                  // true
+sizeof(vertices) == sizeof(vertices[0]) * std::size(vertices);  // true
+```
+
+一句话：`std::vector` 的 `sizeof(vertices)` 是对象本身大小，`sizeof(Vertex) * vertices.size()` 才是元素总大小；C 数组的 `sizeof(vertices)` 则是整个数组的大小。
+
+## 静态成员
+
+### 属于类型而非对象
+
+```cpp
+struct Point {
+    double x;
+    double y;
+    static Point Origin() {
+        return Point{0.0, 0.0};
+    }
+};
+```
+
+`static` 表示该函数属于 `Point` 类型本身，不依赖某个具体对象，通过类型名调用：
+
+```cpp
+Point p = Point::Origin();
+```
+
+**静态成员函数没有 this**：普通成员函数有隐含的 `this`，必须针对具体对象调用；静态成员函数没有 `this`，不能直接访问普通成员，需要时把对象作为参数传入：
+
+```cpp
+static void Print(const Point& point) {
+    std::cout << point.x << '\n';
+}
+```
+
+**不同位置的 static 含义不同**：
+
+```cpp
+struct Counter {
+    static void Reset(); // 静态成员函数：属于类型，没有 this
+    static int count;    // 静态成员变量：所有对象共享一份
+};
+```
+
+```cpp
+void Tick() {
+    static int count = 0; // 函数内静态变量：只初始化一次，调用间保留值
+    ++count;
+}
+```
+
+```cpp
+static int value; // 文件作用域静态变量：仅当前翻译单元可见
+```
+
+## 生命周期
+
+### 对临时返回值取地址
+
+```cpp
+Point MakePoint() { return Point{}; }
+```
+
+错误写法：对临时返回值取地址。
+
+```cpp
+Point* pointer = &MakePoint(); // 错误：临时对象在语句结束时销毁
+```
+
+正确做法是先保存返回值，再取地址：
+
+```cpp
+Point point = MakePoint();
+Point* pointer = &point;
+```
+
+只要 `pointer` 使用期间 `point` 仍然存活就没有问题。

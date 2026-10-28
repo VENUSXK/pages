@@ -1,4 +1,115 @@
 ---
-title: 实验-20261023
+title: 实验 1 - Kernel 时间分析
 ---
 
+实验内容：深挖 Gabor Fields 工作 render 部分的各模块，了解各个渲染过程中瓶颈
+
+## Nsight System 分析
+
+
+```shell  title="nsight system command"
+nsys profile \
+  --trace=cuda,nvtx,osrt \
+  --sample=none \
+  --stats=true \
+  --output=results/nsight/gabor_ms_cam2 \
+  .venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --cam_index 2 \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 1 \
+  --output results/renders/LS-20261008_y100_official_gabor
+```
+
+<OssImage
+  src="experiments/20261022-ground_truth-1920x1080-32spp-1opacity-10maxdepth/LS-20261008_groundtruth_0_cam02.png"
+  alt="Gabor Baseline"
+  width={1920}
+  height={1080}
+  caption="Gabor Baseline"
+/>
+
+
+<OssImage
+  src="experiments/20261028-nsight-system-analysis-result.png"
+  alt="Nsight Systems 分析结果"
+  width={2559}
+  height={1515}
+  caption="Nsight Systems 分析结果"
+  processing="none"
+/>
+
+实验结论：
+
+Mitsuba/Dr.Jit 把 sample() 中的路径追踪逻辑编译、融合，生成一个大型 OptiX GPU 程序，一次 optixLaunch 运行约 123 秒。
+
+瓶颈确定在大型 OptiX 路径追踪 kernel 内部，但还没有区分其中具体哪个模块最慢。
+
+下一步计划：
+
+- 用 Nsight Compute 分析整个 optixLaunch 为什么慢；
+- 通过关闭 NEE、改变 solver、降低路径深度和 LOD 等消融实验，推断各模块耗时。
+
+```shell  title="nsight compute command"
+ncu \
+  --target-processes all \
+  --kernel-name-base function \
+  --kernel-name regex:"raygen__.*" \
+  --launch-count 1 \
+  --set basic \
+  --replay-mode kernel \
+  --force-overwrite \
+  --export results/nsight/gabor_ncu_basic \
+  .venv/bin/python -m gfields.render \
+  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --cam_index 2 \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_res_x 320 \
+  --cam_res_y 180 \
+  --spp 1 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 1 \
+  --output results/renders/LS-20261008_y100_official_gabor
+```

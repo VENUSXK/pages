@@ -1,5 +1,5 @@
 {
-  "title": "参与介质体积渲染",
+  "title": "地形大气和云的渲染",
   "root": false,
   "defaultOpen": true,
   "pages": ["sky_atmosphere", "volumetric_cloud"]
