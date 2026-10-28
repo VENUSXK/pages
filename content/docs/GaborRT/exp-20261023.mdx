@@ -4,6 +4,14 @@ title: 实验 1 - Kernel 时间分析
 
 实验内容：深挖 Gabor Fields 工作 render 部分的各模块，了解各个渲染过程中瓶颈
 
+
+| 实验环境 |
+| --- |
+| Intel Core i7-14700KF |
+| NVIDIA GeForce RTX 4090 D（24 GB GDDR6X） |
+| 64 GB DDR5-4800（2 × 32 GB） |
+| Ubuntu 26.04.1 LTS |
+
 ## Nsight System 分析
 
 
@@ -44,6 +52,8 @@ nsys profile \
   --output results/renders/LS-20261008_y100_official_gabor
 ```
 
+渲染结果：
+
 <OssImage
   src="experiments/20261022-ground_truth-1920x1080-32spp-1opacity-10maxdepth/LS-20261008_groundtruth_0_cam02.png"
   alt="Gabor Baseline"
@@ -52,6 +62,7 @@ nsys profile \
   caption="Gabor Baseline"
 />
 
+Nsight System 结果：
 
 <OssImage
   src="experiments/20261028-nsight-system-analysis-result.png"
@@ -62,16 +73,13 @@ nsys profile \
   processing="none"
 />
 
-实验结论：
+### 实验结论
 
-Mitsuba/Dr.Jit 把 sample() 中的路径追踪逻辑编译、融合，生成一个大型 OptiX GPU 程序，一次 optixLaunch 运行约 123 秒。
+Mitsuba/Dr.Jit 把 `sample()` 中的路径追踪逻辑编译、融合，生成一个大型 OptiX GPU 程序，一次 optixLaunch 运行约 123 秒。瓶颈确定在大型 OptiX 路径追踪 kernel 内部，但无法区分具体哪个模块最慢。
 
-瓶颈确定在大型 OptiX 路径追踪 kernel 内部，但还没有区分其中具体哪个模块最慢。
+下一步计划：1. 用 Nsight Compute 分析整个 optixLaunch 为什么慢；2. 通过消融实验，推断各模块耗时。
 
-下一步计划：
-
-- 用 Nsight Compute 分析整个 optixLaunch 为什么慢；
-- 通过关闭 NEE、改变 solver、降低路径深度和 LOD 等消融实验，推断各模块耗时。
+## Nsight Compute 分析
 
 ```shell  title="nsight compute command"
 ncu \
