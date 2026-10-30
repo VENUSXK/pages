@@ -1,0 +1,15 @@
+---
+title: 实验 3 - 实现最小 RT Demo
+---
+
+|  | OptiX | Vulkan Ray Tracing |
+| --- | --- | --- |
+| 定位 | NVIDIA 的 CUDA 光追计算框架 | 跨厂商图形/计算 API |
+| 硬件支持 | 仅 NVIDIA GPU | NVIDIA、AMD、Intel，取决于驱动 |
+| 编程体系 | CUDA、PTX、OptiX programs | Vulkan、SPIR-V、ray tracing pipeline |
+| 主要用途 | 离线渲染、科学计算、可微渲染 | 实时游戏、实时图形应用 |
+| BVH | OptiX 管理和构建 GAS/IAS | 应用通过 Vulkan 显式管理 BLAS/TLAS |
+| 光追程序 | raygen、miss、hit、intersection | raygen、miss、closest-hit、any-hit、intersection |
+| 控制程度 | 框架代管较多 | 更底层、更显式 |
+| 开发复杂度 | 相对低 | 较高 |
+

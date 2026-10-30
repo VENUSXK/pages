@@ -66,7 +66,7 @@ export function ImageSequenceSlider({
         />
 
         {label && (
-          <figcaption className="absolute bottom-3 left-3 rounded bg-black/60 px-3 py-1 text-sm text-white">
+          <figcaption className="absolute bottom-3 left-3 whitespace-pre-line rounded bg-black/60 px-3 py-1 text-sm text-white">
             {label}
           </figcaption>
         )}
