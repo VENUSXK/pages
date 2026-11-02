@@ -1,5 +1,5 @@
 ---
-title: 实验 1 - 测试 Gabor Fields 边界
+title: 实验 1 - Gabor Fields 体数据重建与渲染评估
 ---
 
 实验内容：基于 Gabor Field 工作渲染 LS 台风数据数据集，测试 Gabor Fields 工作的边界
@@ -43,8 +43,8 @@ before={`/experiments/20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdept
 after={`experiments/20261022-ground_truth-1920x1080-32spp-1opacity-10maxdepth/LS-20261008_groundtruth_0_cam02.png`}
 beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
 afterAlt="20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth"
-beforeLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time 17,033.10 ms`}
-afterLabel={`GT 1024x1024x1024 voxel\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time 20,463.09 ms`}
+beforeLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n17,033.10 ms`}
+afterLabel={`GT 1024x1024x1024 voxel\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n20,463.09 ms`}
 caption="Gabor 测试"
 />
 
@@ -154,8 +154,8 @@ Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM Loss 数据，Line 2 表示 ssi
         after={`experiments/20261022-ground_truth-1920x1080-32spp-1opacity-10maxdepth/LS-20261008_groundtruth_0_${cam}.png`}
         beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
         afterAlt="20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth"
-        beforeLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${time0} ms`}
-        afterLabel={`GT 1024x1024x1024 voxel\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time 20,463.09 ms`}
+        beforeLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n${time0} ms`}
+        afterLabel={`GT 1024x1024x1024 voxel\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n20,463.09 ms`}
         caption="Gabor 测试"
       />
     );
@@ -248,8 +248,8 @@ Line 1 表示 ssim_pyr0 (gaussian only) 的 SSIM Loss 数据，Line 2 表示 ssi
         after={`/experiments/20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
         beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
         afterAlt="20261022-optimized-pyr1-1920x1080-32spp-1opacity-10maxdepth"
-        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${time0} ms`}
-        afterLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${pyr1_time[i]} ms`}
+        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n${time0} ms`}
+        afterLabel={`gaussian 1024 + gabor 24576\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n${pyr1_time[i]} ms`}
         caption="Gabor 测试"
       />
     );
@@ -337,8 +337,8 @@ multi scattering 根据 max depth 决定散射层数，这里对比了不同散�
         after={`/experiments/20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth/render_${cam}.png`}
         beforeAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-2maxdepth"
         afterAlt="20261022-optimized-pyr0-1920x1080-32spp-1opacity-10maxdepth"
-        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 2\nrendering_time ${time2} ms`}
-        afterLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\nrendering_time ${depth10_time[i]} ms`}
+        beforeLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 2\n${time2} ms`}
+        afterLabel={`gaussian 1024\nspp 32\nopacity_scaler 4.0\nmax_depth 10\n${depth10_time[i]} ms`}
         caption="多重散射测试"
       />
     );

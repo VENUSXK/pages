@@ -2,5 +2,5 @@
   "title": "GaborRT",
   "root": false,
   "defaultOpen": true,
-  "pages": ["exp-20261022", "exp-20261023"]
+  "pages": ["exp_1_gabor_fields_volume_reconstruction_and_rendering_evaluation", "exp_2_gabor_fields_rendering_performance_analysis_and_ablation_studies"]
 }
