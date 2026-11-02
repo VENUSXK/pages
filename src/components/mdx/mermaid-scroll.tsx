@@ -15,7 +15,7 @@ export function ScrollToCenter({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={ref} className="overflow-x-auto [&_svg]:max-w-none">
+    <div ref={ref} className="min-w-0 max-w-full [&_svg]:h-auto [&_svg]:max-w-full">
       {children}
     </div>
   );
