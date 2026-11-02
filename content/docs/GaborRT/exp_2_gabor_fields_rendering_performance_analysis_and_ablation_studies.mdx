@@ -631,10 +631,12 @@ xychart-beta
 
 
 
-### 基元 相交消融
+### 基元相交消融
 
 
 #### `max_depth_primitive` 消融
+
+`max_depth_primitive` 表示达到 $n$ 个基元访问数量后，无条件停止。
 
 ```shell title="shell" tab="max_depth_primitive 消融 渲染"
 for depth in 32 64 128 256; do
@@ -670,7 +672,6 @@ for depth in 32 64 128 256; do
 done
 ```
 
-`max_depth_primitive` 表示达到 基元 访问数量后，无条件停止。
 
 | max_depth_primitive | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
@@ -716,6 +717,10 @@ xychart-beta
 
 #### `rr_depth_primitive` 消融
 
+
+`rr_depth_primitive` 表示达到 $n$ 个基元访问数量后，随机决定是否继续。
+
+
 ```shell title="shell" tab="rr_depth_primitive 消融 渲染"
 for rr_depth_prim in 32 64 128 256; do
   .venv/bin/python -m gfields.render \
@@ -749,8 +754,6 @@ for rr_depth_prim in 32 64 128 256; do
     --output "results/renders/ablation-20261029-primitive/rr_depth_${rr_depth_prim}"
 done
 ```
-
-`rr_depth_primitive` 表示从 基元 数量之后做俄罗斯轮盘赌，随机决定是否继续。
 
 | rr_depth_primitive | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
@@ -796,6 +799,8 @@ xychart-beta
 
 #### `max_overlaps` 消融
 
+`max_overlaps` 表示一条射线最多可以经过多少个重叠的基元。
+
 ```shell title="shell" tab="max_overlaps 消融 渲染"
 for overlaps in 32 64 128 256; do
   .venv/bin/python -m gfields.render \
@@ -830,7 +835,7 @@ for overlaps in 32 64 128 256; do
 done
 ```
 
-`max_overlaps` 表示一条射线在某个位置上，最多允许同时记录多少个重叠的 Gabor/Gaussian 基元。
+
 
 | max_overlaps | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
