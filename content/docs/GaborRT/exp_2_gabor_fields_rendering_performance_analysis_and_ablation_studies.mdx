@@ -2,7 +2,16 @@
 title: 实验 2 - Gabor Fields 渲染性能分析与消融实验
 ---
 
-实验内容：深挖 Gabor Fields 工作 render 部分的各模块，了解各个渲染过程中瓶颈
+实验内容：深挖 Gabor Fields 工作 render 部分的各模块，了解渲染过程中瓶颈。
+
+<Cards>
+  <Card icon={<SiGithub />} href="https://github.com/VENUSXK/gabor_fields/tree/experiment-20261022" title="Github">
+    实验代码 experiment-20261025
+  </Card>
+  <Card icon={<SiGoogledrive />} href="https://drive.google.com/file/d/1XKrbRn-YqBbQGea7DqVKzm2c99TxYR7V/view?usp=drive_link" title="Google Drive">
+   数据 1334 x 1501 x 30 8bit
+  </Card>
+</Cards>
 
 
 | 实验环境 |
@@ -73,54 +82,9 @@ Nsight System 结果：
   processing="none"
 />
 
-### 实验结论
-
 Mitsuba/Dr.Jit 把 `sample()` 中的路径追踪逻辑编译、融合，生成一个大型 OptiX GPU 程序，一次 optixLaunch 运行约 123 秒。瓶颈确定在大型 OptiX 路径追踪 kernel 内部，但无法区分具体哪个模块最慢。
 
-下一步计划：1. 用 Nsight Compute 分析整个 optixLaunch 为什么慢；2. 通过消融实验，推断各模块耗时。
-
-## Nsight Compute 分析
-
-```shell title="shell" tab="Nsight Compute 分析命令"
-ncu \     #[!code highlight]
-  --target-processes all \     #[!code highlight]
-  --kernel-name-base function \     #[!code highlight]
-  --kernel-name regex:"raygen__.*" \     #[!code highlight]
-  --launch-count 1 \     #[!code highlight]
-  --set basic \     #[!code highlight]
-  --replay-mode kernel \     #[!code highlight]
-  --force-overwrite \     #[!code highlight]
-  --export results/nsight/gabor_ncu_basic \     #[!code highlight]
-  .venv/bin/python -m gfields.render \
-  results/checkpoints/LS-20261008_y100_official_gabor/optimized_asset_pyr1 \
-  --multiple_scattering \
-  --max_depth 10 \
-  --use_perspective_cam \
-  --cam_fov 65 \
-  --cam_distance 3 \
-  --cam_count 8 \
-  --cam_index 2 \
-  --cam_elevation 75 \
-  --cam_azimuth_span 360 \
-  --cam_res_x 320 \
-  --cam_res_y 180 \
-  --spp 1 \
-  --rr_depth 2 \
-  --rr_nee_depth 64 \
-  --max_depth_primitive 256 \
-  --rr_depth_primitive 256 \
-  --max_overlaps 256 \
-  --solver_type bisection \
-  --solver_max_iterations 4 \
-  --stochastic_selection_criteria deterministic \
-  --stochastic_selection_criteria_nee deterministic \
-  --opacity_scaler 4.0 \
-  --albedo 1.0 \
-  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
-  --envmap_scale 1.0 \
-  --max_level 1 \
-  --output results/renders/LS-20261008_y100_official_gabor
-```
+下一步计划通过消融实验，推断各模块耗时，找性能瓶颈。
 
 
 ## Optix 渲染后端消融实验
@@ -291,7 +255,7 @@ xychart-beta
 
 ### NEE 消融
 
-Next Event Estimation，表示在介质碰撞点 $x_t$ 处，主动向光源发射一条阴影射线，直接估计光源对该点的贡献
+Next Event Estimation，表示在介质碰撞点 $x_t$ 处，主动向光源发射一条阴影射线，直接估计光源对该点的贡献。
 
 ```shell title="shell" tab="关闭 NEE 渲染"
 .venv/bin/python -m gfields.render \
@@ -633,7 +597,7 @@ done
 
 ```mermaid
 xychart-beta
-    title "GPU Time (max_depth ablation [bar 1] vs max_depth 10 baseline [bar 2] vs voxel grid data [bar 3])"
+    title "GPU Time (different max_depth [bar 1] vs baseline [bar 2] vs voxel grid data [bar 3])"
     x-axis "max_depth" [1, 2, 4, 8, 10]
     y-axis "GPU Time (ms)" 0 --> 14000
     bar [1370.48, 4734.41, 8627.91, 12781.81, 13758.01]
@@ -667,7 +631,7 @@ xychart-beta
 
 
 
-### primitive 相交消融
+### 基元 相交消融
 
 
 #### `max_depth_primitive` 消融
@@ -706,7 +670,7 @@ for depth in 32 64 128 256; do
 done
 ```
 
-`max_depth_primitive` 表示达到 primitive 访问数量后，无条件停止。
+`max_depth_primitive` 表示达到 基元 访问数量后，无条件停止。
 
 | max_depth_primitive | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
@@ -742,8 +706,8 @@ xychart-beta
       key={`max-depth-${value}`}
       before={baseline}
       after={`experiments/20261029-optimized-pyr1-640x360-spp-4opacity-primitive/20261029-ablation-max_depth_${value}-pyr1-640x360-32spp-4opacity.png`}
-      beforeAlt="Baseline max depth primitive 256"
-      afterAlt={`Max depth primitive ${value}`}
+      beforeAlt="Baseline max depth 基元 256"
+      afterAlt={`Max depth 基元 ${value}`}
       beforeLabel={`Baseline\nmax_depth_primitive 256\n13,786.08 ms`}
       afterLabel={`max_depth_primitive ${value}\n${time} ms`}
     />
@@ -786,7 +750,7 @@ for rr_depth_prim in 32 64 128 256; do
 done
 ```
 
-`rr_depth_primitive` 表示从 primitive 数量之后做俄罗斯轮盘赌，随机决定是否继续。
+`rr_depth_primitive` 表示从 基元 数量之后做俄罗斯轮盘赌，随机决定是否继续。
 
 | rr_depth_primitive | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
@@ -822,8 +786,8 @@ xychart-beta
       key={`rr-depth-${value}`}
       before={baseline}
       after={`experiments/20261029-optimized-pyr1-640x360-spp-4opacity-primitive/20261029-ablation-rr_depth_${value}-pyr1-640x360-32spp-4opacity.png`}
-      beforeAlt="Baseline primitive RR depth 256"
-      afterAlt={`Primitive RR depth ${value}`}
+      beforeAlt="Baseline 基元 RR depth 256"
+      afterAlt={`基元 RR depth ${value}`}
       beforeLabel={`Baseline\nrr_depth_primitive 256\n13,786.08 ms`}
       afterLabel={`rr_depth_primitive ${value}\n${time} ms`}
     />
@@ -866,7 +830,7 @@ for overlaps in 32 64 128 256; do
 done
 ```
 
-`max_overlaps` 表示一条射线在某个位置上，最多允许同时记录多少个重叠的 Gabor/Gaussian primitives
+`max_overlaps` 表示一条射线在某个位置上，最多允许同时记录多少个重叠的 Gabor/Gaussian 基元。
 
 | max_overlaps | SPP | GPU 时间 (ms) | 帧率 (FPS) |
 | :---: | :---: | :---: | :---: |
@@ -939,7 +903,7 @@ done
 ```mermaid
 xychart-beta
     title "PSNR (different gabor count [lines 1-5])"
-    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    x-axis "sample" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
     y-axis "PSNR (dB)" 19 --> 42
     line [24.37343216, 24.93034744, 25.90635872, 26.92897034, 27.26358604, 27.44514275, 27.83660698, 28.96545792, 29.93209457, 31.0528965, 31.89059639, 32.47357941, 33.19457626, 33.91563034, 34.42859268, 34.9531517, 35.41440582, 35.76366043, 36.07353973, 36.32841492, 36.5222702, 36.63023376, 36.80606079, 36.91717529, 37.05937958]
     line [23.06514931, 23.75126648, 25.10233307, 26.76035118, 27.28924561, 27.54113579, 27.77762222, 29.34095383, 30.50611115, 31.71299171, 32.64149857, 33.14035797, 33.92810822, 34.62727356, 35.09339142, 35.65812302, 36.20280075, 36.6162796, 36.97690201, 37.27919769, 37.50643539, 37.70387268, 37.86645508, 38.03839493, 38.19408035]
@@ -951,7 +915,7 @@ xychart-beta
 ```mermaid
 xychart-beta
     title "SSIM (different gabor count [lines 1-5])"
-    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    x-axis "sample" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
     y-axis "SSIM" 0 --> 0.28
     line [0.18627261, 0.16521464, 0.12724923, 0.09504954, 0.08837207, 0.09439777, 0.07419335, 0.05733129, 0.04882881, 0.04155251, 0.03680317, 0.03527382, 0.03180766, 0.02969807, 0.02888384, 0.02736434, 0.02638473, 0.02591506, 0.02529900, 0.02490525, 0.02470041, 0.02452280, 0.02428373, 0.02422771, 0.02399976]
     line [0.21506754, 0.18793596, 0.13885887, 0.09709554, 0.08963639, 0.09387286, 0.07156924, 0.05245121, 0.04436859, 0.03653293, 0.03193996, 0.03104052, 0.02718512, 0.02492490, 0.02437138, 0.02269749, 0.02167620, 0.02121856, 0.02060558, 0.02021424, 0.02010446, 0.01978103, 0.01958241, 0.01946030, 0.01926160]
@@ -1175,3 +1139,48 @@ xychart-beta
   afterLabel={`voxel grid data\n1920×1080\n20,463.09 ms`}
   caption="gabor / voxel grid data: 1920×1080"
 />
+
+
+### 消融实验结果汇总
+
+```mermaid
+xychart-beta
+    title "GPU Time (640x360, 32 SPP)"
+    x-axis "Experiment" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    y-axis "GPU Time (ms)" 0 --> 17000
+    bar [13786.08, 8434.24, 13588.84, 13571.05, 13825.45, 13756.72, 13769.01, 13849.29, 1370.48, 4734.41, 8627.91, 12781.81, 13758.01, 320.39, 2748.79, 12406.18, 13868.53, 1064.88, 4652.54, 12732.98, 13853.25, 7069.65, 13330.24, 13800.06, 13902.29, 8001.03, 10122.26, 11782.22, 13315.18, 16145.03, 2240.92]
+```
+
+| Experiment | Content |
+|:---:|:---:|
+| 1 | NEE on (baseline) |
+| 2 | NEE off |
+| 3 | baseline, average across 8 cameras |
+| 4 | solver_type disabled |
+| 5 | solver_type bisection, 1 iteration |
+| 6 | solver_type bisection, 2 iterations |
+| 7 | solver_type bisection, 4 iterations |
+| 8 | solver_type newton, 4 iterations |
+| 9 | max_depth 1 |
+| 10 | max_depth 2 |
+| 11 | max_depth 4 |
+| 12 | max_depth 8 |
+| 13 | max_depth 10 |
+| 14 | max_depth_primitive 32 |
+| 15 | max_depth_primitive 64 |
+| 16 | max_depth_primitive 128 |
+| 17 | max_depth_primitive 256 |
+| 18 | rr_depth_primitive 32 |
+| 19 | rr_depth_primitive 64 |
+| 20 | rr_depth_primitive 128 |
+| 21 | rr_depth_primitive 256 |
+| 22 | max_overlaps 32 |
+| 23 | max_overlaps 64 |
+| 24 | max_overlaps 128 |
+| 25 | max_overlaps 256 |
+| 26 | gabor_count 12,288 |
+| 27 | gabor_count 18,432 |
+| 28 | gabor_count 24,576 |
+| 29 | gabor_count 30,720 |
+| 30 | gabor_count 36,864 |
+| 31 | voxel_grid |
