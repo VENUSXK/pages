@@ -2,5 +2,9 @@
   "title": "GaborRT",
   "root": false,
   "defaultOpen": true,
-  "pages": ["exp_1_gabor_fields_volume_reconstruction_and_rendering_evaluation", "exp_2_gabor_fields_rendering_performance_analysis_and_ablation_studies"]
+  "pages": [
+    "exp_1_gabor_fields_volume_reconstruction_and_rendering_evaluation",
+    "exp_2_gabor_fields_rendering_performance_analysis_and_ablation_studies",
+    "exp_3_gabor_fields_fixed_z_layers"
+  ]
 }
