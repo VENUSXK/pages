@@ -39,7 +39,7 @@ export function ImageSequenceSlider({
   width = 1920,
   height = 1080,
   className = '',
-  showCounter = false,
+  showCounter = true,
   processing = '2webp',
 }: ImageSequenceSliderProps) {
   const lastIndex = Math.max(images.length - 1, 0);

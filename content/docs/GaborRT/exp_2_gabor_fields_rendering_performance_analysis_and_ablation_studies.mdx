@@ -878,6 +878,8 @@ xychart-beta
 
 ## 基元数量消融实验
 
+### Gaussian 基元数量消融
+
 ```shell title="shell" tab="高斯数量消融训练命令"
 gauss_counts=(12288 18432 24576 30720 36864)
 for gauss_count in "${gauss_counts[@]}"; do
@@ -1065,6 +1067,9 @@ xychart-beta
     afterLabel={`voxel grid data\n1920×1080\n20,463.09 ms`}
   />
 ))}
+
+
+### Gabor 基元数量消融
 
 
 ```shell title="shell" tab="gabor 数量消融训练命令"
@@ -1329,30 +1334,33 @@ xychart-beta
   caption="gabor / voxel grid data: 1920×1080"
 />
 
+### Gaussian 和 Gabor 效果对比
+
 ```mermaid
 xychart-beta
-    title "GPU Time (gaussian+gabor [bar 1] vs gaussian-only [bar 2])"
-    x-axis "gaussian count" [12288, 18432, 24576, 30720, 36864]
+    title "GPU Time (gaussian+gabor [bar 1] vs gaussian-only [bar 2] vs voxel grid data [bar 3])"
+    x-axis "gabor count / gaussian-only count" [12288, 18432, 24576, 30720, 36864]
     y-axis "GPU Time (ms)" 0 --> 700000
-    bar [105080.21, 105080.21, 105080.21, 105080.21, 105080.21]
+    bar [71507.20, 90538.91, 105080.21, 118642.82, 143563.30]
     bar [62716.06, 137586.14, 286251.31, 527829.25, 664146.25]
+    bar [20463.09, 20463.09, 20463.09, 20463.09, 20463.09]
 ```
 
 {[
-  { gaussCount: 12288, time: "62,716.06" },
-  { gaussCount: 18432, time: "137,586.14" },
-  { gaussCount: 24576, time: "286,251.31" },
-  { gaussCount: 30720, time: "527,829.25" },
-  { gaussCount: 36864, time: "664,146.25" },
-].map(({ gaussCount, time }) => (
+  { count: 12288, gaborTime: "71,507.20", gaussianTime: "62,716.06" },
+  { count: 18432, gaborTime: "90,538.91", gaussianTime: "137,586.14" },
+  { count: 24576, gaborTime: "105,080.21", gaussianTime: "286,251.31" },
+  { count: 30720, gaborTime: "118,642.82", gaussianTime: "527,829.25" },
+  { count: 36864, gaborTime: "143,563.30", gaussianTime: "664,146.25" },
+].map(({ count, gaborTime, gaussianTime }) => (
   <ImageComparison
-    key={`baseline-vs-gaussian-${gaussCount}-1920x1080`}
-    before="experiments/20261102-ablation-max_depth_64-pyr1-1920x1080-32spp-4opacity-1024gauss-different-gabor/20261102-ablation-max_depth_64-pyr1-1920x1080-32spp-4opacity-1024gauss-24576gabor.png"
-    after={`experiments/20261103-ablation-max_depth_10-pyr0-1920x1080-32spp-4opacity-different-gauss/20261103-ablation-max_depth_64-pyr0-1920x1080-32spp-4opacity-${gaussCount}gauss.png`}
-    beforeAlt="baseline gaussian 1,024 + gabor 24,576"
-    afterAlt={`gaussian ${gaussCount.toLocaleString("en-US")}`}
-    beforeLabel={`(baseline) gaussian 1,024 + gabor 24,576\n1920×1080\n105,080.21 ms`}
-    afterLabel={`gaussian ${gaussCount.toLocaleString("en-US")}\n1920×1080\n${time} ms`}
+    key={`gabor-vs-gaussian-${count}-1920x1080`}
+    before={`experiments/20261102-ablation-max_depth_64-pyr1-1920x1080-32spp-4opacity-1024gauss-different-gabor/20261102-ablation-max_depth_64-pyr1-1920x1080-32spp-4opacity-1024gauss-${count}gabor.png`}
+    after={`experiments/20261103-ablation-max_depth_10-pyr0-1920x1080-32spp-4opacity-different-gauss/20261103-ablation-max_depth_64-pyr0-1920x1080-32spp-4opacity-${count}gauss.png`}
+    beforeAlt={`gaussian 1,024 + gabor ${count.toLocaleString("en-US")}`}
+    afterAlt={`gaussian ${count.toLocaleString("en-US")}`}
+    beforeLabel={`gaussian 1,024 + gabor ${count.toLocaleString("en-US")}\n1920×1080\n${gaborTime} ms`}
+    afterLabel={`gaussian ${count.toLocaleString("en-US")}\n1920×1080\n${gaussianTime} ms`}
   />
 ))}
 
