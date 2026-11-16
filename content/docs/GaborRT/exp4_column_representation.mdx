@@ -1,0 +1,41 @@
+---
+title: 2.5D 高斯表示拟合思路
+description: 2.5D 柱状（Column）高斯表示思路
+---
+
+
+
+考虑到体积场在 y轴（垂直轴）方面有相关性，将体积场表示为共享的 2D 高斯截面与 1D 轴向变化函数：
+
+$$
+\kappa(x,y,z)=
+\sum_{i=1}^{M}
+\phi_i(x,y)\,q_i(z),
+$$
+
+其中 $\phi_i$ 是 2D 高斯，轴向函数为：
+
+$$
+q_i(z)=\sum_{k=1}^{K}c_{ik}b_k(z),
+$$
+
+{/* $b_k$ 可以选择低阶 DCT、B-spline 或少量 1D Gaussian。 */}
+
+$b_k$ 选择少量 1D Gaussian，这样有机会保留闭式光学深度积分。
+
+<OssImage
+  src="experiments/20261116-ablation_columns_kx_slabx/algorithm.png"
+  darkSrc="experiments/20261116-ablation_columns_kx_slabx/algorithm_inverted.png"
+  alt="2.5D Column 表示算法示意图"
+  width={6176}
+  height={4096}
+  caption="2.5D Column 表示算法示意图"
+  processing="none"
+  priority
+/>
+
+
+这样的表示可以带来这些收益：
+
+- **减少参数（减少旋转自由度），增大压缩比例**。体积数据在相邻切片中横向轮廓相近，只是密度逐渐变化，可以用“一套横向结构 + 一条密度变化曲线”表示。只保留 x-z 平面上的旋转，减少自由度。
+- **减少 BVH 求交，渲染提速**。让多个共享 x-z 平面但不同轴向函数的高斯（即一个柱状表示内的高斯）共同参与一次 BVH 查询。同时，柱内希望能实现多个基元的逆CDF求解，简化为一次逆CDF求解和多个简单变换。

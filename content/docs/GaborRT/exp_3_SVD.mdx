@@ -1,0 +1,149 @@
+---
+title: "各向异性数据 SVD 分解"
+---
+
+export const basePath = "experiments/20261105-SVD-result-overview";
+export const svdGroups = [
+    { slab: "004", mode: "axial_centered", ranks: [1, 2, 4], metricsHeight: 835 },
+    { slab: "004", mode: "raw", ranks: [1, 2, 4], metricsHeight: 660 },
+    { slab: "008", mode: "axial_centered", ranks: [1, 2, 4, 8], metricsHeight: 1010 },
+    { slab: "008", mode: "raw", ranks: [1, 2, 4, 8], metricsHeight: 835 },
+    { slab: "016", mode: "axial_centered", ranks: [1, 2, 4, 8, 12, 16], metricsHeight: 1360 },
+    { slab: "016", mode: "raw", ranks: [1, 2, 4, 8, 12, 16], metricsHeight: 1185 },
+    { slab: "030", mode: "axial_centered", ranks: [1, 2, 4, 8, 12, 16], metricsHeight: 1360 },
+    { slab: "030", mode: "raw", ranks: [1, 2, 4, 8, 12, 16], metricsHeight: 1185 },
+  ].map(({ slab, mode, ranks, metricsHeight }) => {
+    const prefix = `all_blocks__slab${slab}__${mode}`;
+    return { slab, mode, images: [
+      {
+        src: `${basePath}/${prefix}__templates_contact.png`,
+        alt: "模板总览",
+        width: 1760,
+        height: 1885,
+      },
+      ...ranks.flatMap((rank) => [
+        {
+          src: `${basePath}/${prefix}__rank${String(rank).padStart(3, "0")}__z015__reconstructions_contact.png`,
+          alt: `rank ${rank}  z=15  重建总览`,
+          width: 1320,
+          height: 805,
+        },
+        {
+          src: `${basePath}/${prefix}__rank${String(rank).padStart(3, "0")}__z015__errors_contact.png`,
+          alt: `rank ${rank}  z=15  误差总览`,
+          width: 1320,
+          height: 805,
+        },
+      ]),
+      {
+        src: `${basePath}/slab${slab}__${mode}__all_blocks_ranks_metrics.png`,
+        alt: "所有 block 与 rank 的指标汇总",
+        width: 762,
+        height: metricsHeight,
+      },
+      {
+        src: `${basePath}/slab${slab}__${mode}__psnr_vs_rank_all_blocks.png`,
+        alt: "所有 block 的 PSNR 与 rank 曲线",
+        width: 1200,
+        height: 720,
+      },
+    ] };
+  });
+
+
+{/* 
+<ImageSequenceSlider
+  images={Array.from({ length: 30 }, (_, index) => ({
+    src: `experiments/20261105-LS-data/22_cc_Area_${index}_1920x1080.png`,
+    alt: `LS 数据第 ${index + 1} 层（原始编号 ${index}）`
+  }))}
+  width={1920}
+  height={1080}
+  showCounter={true}
+/> */}
+
+
+## axial_centered
+
+### Slab 4
+
+{svdGroups[0].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 8
+
+{svdGroups[2].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 16
+
+{svdGroups[4].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 30
+
+{svdGroups[6].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+
+## raw
+
+### Slab 4
+
+{svdGroups[1].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 8
+
+{svdGroups[3].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 16
+
+{svdGroups[5].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}
+
+### Slab 30
+
+{svdGroups[7].images.map((image) => (
+  <OssImage
+    key={image.src}
+    {...image}
+    className="m-auto h-auto max-w-full rounded-lg"
+  />
+))}

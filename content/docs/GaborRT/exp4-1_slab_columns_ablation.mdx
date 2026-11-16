@@ -1,0 +1,226 @@
+---
+title: 2.5D 高斯表示初步实现
+description: 基于 Gabor Fields 代码实现 2.5D 柱状（Column）高斯表示，并通过消融实验评估拟合效果。
+---
+
+### 2.5D 单高斯实现
+
+设置 `--primitives_per_column 1`，相当于把 3d 高斯限制 y 轴旋转自由度。
+
+```shell title="shell" tab="column 训练"
+WANDB_MODE=disabled bash examples/train.sh \
+  data/thin_layer/LS_density_y100.npy \
+  --output results/checkpoints/k1_slab8_cam32_stable \
+  --opacity_scale 10.0 \
+  --use_columns_representation \
+  --column_count 24576 --primitives_per_column 1 \
+  --column_slab_depth 8 \
+  --column_lr 4.0 \
+  --centers_lr 0.003 --scales_lr 0.0002 \
+  --opacity_lr 0.00002 --quats_lr 0.0003 \
+  --init_scale 1.0 --init_opacity 0.00008 \
+  --lambda_opacity 0.0001 --lambda_scale 0.000001 \
+  --gauss_target_level 0 \
+  --iterations_gaussian 200 \
+  --cam_count 32 \
+  --cam_res_x 512 --cam_res_y 512 \
+  --ref_spp_chunk 64 \
+  --opt_cam_batch 1 \
+  --seed_offset 0
+```
+
+```shell title="shell" tab="gaussian 训练"
+WANDB_MODE=disabled bash examples/train.sh \
+  data/thin_layer/LS_density_y100.npy \
+  --gaussian \
+  --output results/checkpoints/gaussian_24576_cam32_matched \
+  --opacity_scale 10.0 \
+  --gauss_count 24576 \
+  --global_lr_gaussian 4.0 \
+  --centers_lr 0.003 --scales_lr 0.0002 \
+  --opacity_lr 0.00002 --quats_lr 0.0003 \
+  --init_scale 1.0 --init_opacity 0.00008 \
+  --lambda_opacity 0.0001 --lambda_scale 0.000001 \
+  --gauss_target_level 0 \
+  --iterations_gaussian 200 \
+  --cam_count 32 \
+  --cam_res_x 512 --cam_res_y 512 \
+  --densify_until 0 --relocate_until 0 \
+  --ref_spp_chunk 64 \
+  --opt_cam_batch 1 \
+  --seed_offset 0
+```
+
+
+```mermaid
+xychart-beta
+    title "Trained Model File Size"
+    x-axis "Representation" [3D Gaussian, 2.5D Gaussian]
+    y-axis "File Size (KB)" 0 --> 1800
+    bar [1690, 769]
+```
+
+```mermaid
+xychart-beta
+    title "PSNR (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "PSNR (dB)" 0 --> 45
+    line [19.5457954407, 16.1561183929, 18.8074913025, 25.6113204956, 22.0654506683, 28.52277565, 32.7957687378, 33.5149307251, 28.4137496948, 27.1140594482, 25.7293815613, 23.6869525909, 25.3478927612, 26.180311203, 23.7791881561, 24.5278530121, 26.3790111542, 27.6924762726, 26.2323169708, 26.1596641541, 31.4236087799, 36.155834198, 40.0160827637, 35.2413406372, 33.112361908, 40.1252326965, 39.2910308838]
+    line [16.0861701965, 17.3393058777, 21.6573123932, 22.8141269684, 18.577753067, 23.5634269714, 31.4704055786, 34.670501709, 33.8945922852, 30.8321056366, 31.2400226593, 30.7976016998, 29.1249771118, 29.6209373474, 30.5411148071, 30.9719219208, 32.0133666992, 33.7354660034, 35.115196228, 36.8491325378, 38.6895256042, 41.4503669739, 42.3718910217, 43.0460243225, 42.89112854, 43.0044403076, 43.1904640198]
+```
+
+```mermaid
+xychart-beta
+    title "SSIM (Logged Value) (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "SSIM (Logged Value)" 0 --> 0.36
+    line [0.3318869472, 0.3003621101, 0.2266104221, 0.1405623108, 0.1002885923, 0.0811119527, 0.0614350066, 0.0499764569, 0.0601712875, 0.062016584, 0.0648690388, 0.0697708279, 0.0627205893, 0.0591233596, 0.064509131, 0.0581079647, 0.0508441851, 0.041755788, 0.0453462787, 0.0426462032, 0.0301142372, 0.0261193626, 0.0230532568, 0.0251195841, 0.0255743917, 0.0222256184, 0.0223423187]
+    line [0.3148132265, 0.2709466815, 0.1789064258, 0.1061126292, 0.1121049523, 0.0991524383, 0.0707721859, 0.0505733788, 0.0463156849, 0.0464835204, 0.0453612953, 0.0445934199, 0.0444667228, 0.0440808237, 0.0411095284, 0.0390127078, 0.0335913748, 0.0296401028, 0.0271487068, 0.0243522376, 0.022529874, 0.0212372988, 0.0207548868, 0.0202698484, 0.0202395394, 0.0200727582, 0.0198355932]
+```
+
+```mermaid
+xychart-beta
+    title "L1 (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "L1" 0 --> 0.1
+    line [0.0591885708, 0.0956385136, 0.067490682, 0.0287534017, 0.0497794002, 0.0207545273, 0.0117761912, 0.0114113847, 0.0194375794, 0.0202028826, 0.0234031975, 0.0267340969, 0.0246481281, 0.0228296891, 0.0276337061, 0.0232977681, 0.0192322321, 0.0187441614, 0.0137149896, 0.011553091, 0.0072001484, 0.0056799585, 0.0043902872, 0.0044632042, 0.0046297428, 0.0037971435, 0.00385539]
+    line [0.095942691, 0.081507884, 0.0451129712, 0.0452243239, 0.075221397, 0.0400070176, 0.0142854461, 0.0097715557, 0.0109578725, 0.0139259398, 0.0143689318, 0.0148816872, 0.016094923, 0.016150305, 0.014306494, 0.0137312412, 0.0122862281, 0.0102039073, 0.008677627, 0.0070276507, 0.0056897299, 0.00419477, 0.0036709432, 0.003390135, 0.0033284998, 0.0032853181, 0.0032507745]
+```
+
+```mermaid
+xychart-beta
+    title "Gradient L1 (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "Gradient L1" 0 --> 0.014
+    line [0.0120991534, 0.0097560808, 0.0078302156, 0.0058081262, 0.0045911688, 0.0042978898, 0.0038382865, 0.0035489213, 0.0039813914, 0.0042520678, 0.0045906571, 0.0049343109, 0.0044074971, 0.0041761063, 0.0047600954, 0.0047274819, 0.00416, 0.0037492979, 0.0045064837, 0.0045453813, 0.003443168, 0.0031081538, 0.0028730037, 0.0031256806, 0.0032192427, 0.0028616718, 0.0028823772]
+    line [0.0103812963, 0.0090061827, 0.006728644, 0.0048500965, 0.0046700961, 0.0046503856, 0.0040439349, 0.0035801963, 0.0034581658, 0.0034200987, 0.003393339, 0.0033786243, 0.0033432911, 0.0033262374, 0.0032757709, 0.0032178871, 0.0031014867, 0.0030076399, 0.0029670519, 0.0028944283, 0.0028376332, 0.002809372, 0.0028000916, 0.0027833248, 0.0027864014, 0.0027816263, 0.0027689594]
+```
+
+```mermaid
+xychart-beta
+    title "Loss (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "Loss" 0 --> 0.16
+    line [0.1286243349, 0.1480745226, 0.1084986404, 0.057885766, 0.0635750294, 0.0371065475, 0.0255096853, 0.0224327948, 0.0310747325, 0.0322069675, 0.0353988521, 0.0391736329, 0.0358488411, 0.0336405151, 0.03863772, 0.0338130407, 0.0289672632, 0.026345402, 0.0234684013, 0.0211702604, 0.0147694666, 0.012625644, 0.0108881695, 0.0114551503, 0.0116902366, 0.0102249095, 0.0102936607]
+    line [0.1515858918, 0.1297776848, 0.0794354156, 0.0612728521, 0.0852672383, 0.0557590686, 0.0294148643, 0.0210693683, 0.0209796075, 0.0233841911, 0.0235174745, 0.0237625968, 0.0246507041, 0.0246396195, 0.0225463249, 0.0216176677, 0.0192002542, 0.0166612677, 0.0149021, 0.0129636871, 0.0115039945, 0.0100566745, 0.0095406706, 0.0092057073, 0.0091496138, 0.0090728663, 0.0089852056]
+```
+
+```mermaid
+xychart-beta
+    title "Deletable Primitives (3D Gaussian vs 2.5D Gaussian)"
+    x-axis "Sample Index" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+    y-axis "Count" 0 --> 2000
+    line [0, 2, 53, 617, 571, 1853, 1335, 617, 847, 581, 602, 730, 556, 760, 821, 761, 719, 605, 560, 385, 314, 245, 355, 350, 427, 418, 321]
+    line [0, 0, 0, 0, 413, 212, 515, 803, 601, 523, 472, 428, 585, 510, 415, 362, 379, 385, 361, 231, 221, 214, 226, 170, 247, 226, 293]
+```
+
+```shell title="shell" tab="column 渲染"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/k1_slab8_cam32_stable/optimized_asset_pyr0 \
+  --use_columns_representation \
+  --kernel gaussian \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_index 2 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 0 \
+  --output results/renders/k1_slab8_cam32_stable_1920x1080
+```
+
+```shell title="shell" tab="gaussian 渲染"
+.venv/bin/python -m gfields.render \
+  results/checkpoints/gaussian_24576_cam32_matched/optimized_asset_pyr0 \
+  --kernel gaussian \
+  --multiple_scattering \
+  --max_depth 10 \
+  --use_perspective_cam \
+  --cam_fov 65 \
+  --cam_distance 3 \
+  --cam_count 8 \
+  --cam_elevation 75 \
+  --cam_azimuth_span 360 \
+  --cam_index 2 \
+  --cam_res_x 1920 \
+  --cam_res_y 1080 \
+  --spp 32 \
+  --rr_depth 2 \
+  --rr_nee_depth 64 \
+  --max_depth_primitive 256 \
+  --rr_depth_primitive 256 \
+  --max_overlaps 256 \
+  --solver_type bisection \
+  --solver_max_iterations 4 \
+  --stochastic_selection_criteria deterministic \
+  --stochastic_selection_criteria_nee deterministic \
+  --opacity_scaler 4.0 \
+  --albedo 1.0 \
+  --envmap data/envmaps/qwantani_dusk_2_1k.exr \
+  --envmap_scale 1.0 \
+  --max_level 0 \
+  --output results/renders/gaussian_24576_cam32_matched_1920x1080
+```
+
+```mermaid
+xychart-beta
+    title "Rendering Execution Time (1920x1080, 32 SPP, cam02)"
+    x-axis "Representation" ["3D Gaussian", "2.5D Gaussian"]
+    y-axis "Execution Time (ms)" 0 --> 350000
+    bar [262720.91, 326984.34]
+```
+
+<ImageComparison
+  before="experiments/20261116-ablation_columns_kx_slabx/gaussian_24576_cam32_matched_1920x1080.png"
+  after="experiments/20261116-ablation_columns_kx_slabx/k1_slab8_cam32_stable_1920x1080.png"
+  beforeAlt="3D Gaussian，24,576 个独立高斯，cam02"
+  afterAlt="2.5D Gaussian，24,576 根 Column，每柱 1 个高斯，slab 深度 8，cam02"
+  beforeLabel={`3D Gaussian\n24,576 independent Gaussians\n1920×1080 · 32 spp · cam02\nExecution time: 262,720.91 ms`}
+  afterLabel={`2.5D Gaussian\n24,576 columns\n1 gaussian per column\nslab=8\n1920×1080\n32 spp\n326,984.34 ms`}
+/>
+
+
+### slab ablation
+
+```shell
+for slab_depth in 1 4 8 32 0; do
+  WANDB_MODE=disabled bash examples/train.sh \
+    data/thin_layer/LS_density_y100.npy \
+    --output "results/checkpoints/ablation_k1_cam32_stable/slab${slab_depth}" \
+    --opacity_scale 10.0 \
+    --use_columns_representation \
+    --column_count 24576 --primitives_per_column 1 \
+    --column_slab_depth "$slab_depth" \
+    --column_lr 4.0 \
+    --centers_lr 0.003 --scales_lr 0.0002 \
+    --opacity_lr 0.00002 --quats_lr 0.0003 \
+    --init_scale 1.0 --init_opacity 0.00008 \
+    --lambda_opacity 0.0001 --lambda_scale 0.000001 \
+    --gauss_target_level 0 \
+    --iterations_gaussian 200 \
+    --cam_count 32 \
+    --cam_res_x 512 --cam_res_y 512 \
+    --ref_spp_chunk 64 \
+    --opt_cam_batch 1 \
+    --seed_offset 0 || break
+done
+```

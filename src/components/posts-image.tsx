@@ -5,6 +5,7 @@ import { useState } from "react";
 
 interface OssImageProps {
 	src: string; // OSS 上的文件路径，如 "images/sky_atmosphere_1993.svg"
+	darkSrc?: string;
 	alt: string;
 	width?: number;
 	height?: number;
@@ -24,7 +25,7 @@ interface OssImageProps {
  * 封装 Next.js Image，自动拼接 OSS 链接
  * 如果是 SVG 文件，自动跳过 OSS 处理
  */
-	export function OssImage({
+	function OssImageInner({
 		src,
 		alt,
 		width,
@@ -129,4 +130,19 @@ interface OssImageProps {
 		/>
 		</div>
   	);
+}
+
+export function OssImage({ darkSrc, ...props }: OssImageProps) {
+	if (!darkSrc) return <OssImageInner {...props} />;
+
+	return (
+		<>
+			<div className="dark:hidden">
+				<OssImageInner {...props} />
+			</div>
+			<div className="hidden dark:block">
+				<OssImageInner {...props} src={darkSrc} />
+			</div>
+		</>
+	);
 }

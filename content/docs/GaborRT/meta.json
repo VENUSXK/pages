@@ -5,6 +5,8 @@
   "pages": [
     "exp_1_gabor_fields_volume_reconstruction_and_rendering_evaluation",
     "exp_2_gabor_fields_rendering_performance_analysis_and_ablation_studies",
-    "exp_3_SVD_LS_data"
+    "exp_3_SVD",
+    "exp4_column_representation",
+    "exp4-1_slab_columns_ablation"
   ]
 }
